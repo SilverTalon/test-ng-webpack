@@ -10,7 +10,7 @@ var config = {
  },
  context: __dirname,
  entry: {
-   app: ['webpack/hot/dev-server', './app/main.js']
+   app: ['webpack/hot/dev-server', './app/app.js']
  },
  output: {
    publicPath: '/',
@@ -18,27 +18,24 @@ var config = {
    filename: 'bundle.js'
  },
  resolve: {
+   extensions: ['', '.js', '.json'],
    alias: {}
  },
  module: {
    noParse: [],
-   loaders: [{
-     test: /\.js$/,
-     loader: 'jsx-loader',
-     exclude: [bower_dir, node_modules_dir]
-   }, {
-     test: /\.css$/,
-     loader: 'style-loader!css-loader'
-   }, {
-     test: /\.(woff|png)$/,
-     loader: 'url-loader?limit=100000'
-   }]
+   loaders: [
+     { test: /\.js$/, loader: '6to5-loader', exclude: [bower_dir, node_modules_dir] },
+     /*{ test: /\.html$/, loader: "ng-cache?prefix=[dir]/[dir]" },*/
+     { test: /\.html$/, loader: "file-loader?name=components/[name]/[name].[ext]" },
+     { test: /\.css$/, loader: 'style-loader!css-loader' },
+     { test: /\.(woff|png)$/, loader: 'url-loader?limit=100000' }
+   ]
  },
  plugins: [
    new webpack.optimize.CommonsChunkPlugin('app', null, false)
  ]
 };
 
-config.addVendor('react', path.resolve(bower_dir, 'react/react.min.js'));
+config.addVendor('ngNewRouter', path.resolve(node_modules_dir, 'angular-new-router/dist/router.es5.js'));
 
 module.exports = config;

@@ -94,45 +94,12 @@
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(2);
-	module.exports = __webpack_require__(1);
+	__webpack_require__(1);
+	module.exports = __webpack_require__(2);
 
 
 /***/ },
 /* 1 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(6);
-
-	var angular = __webpack_require__(5);
-
-	var route = function() {
-	  if (!location.hash || location.hash.length === 1) {
-	    __webpack_require__.e/* nsure */(1, function (require) {
-	      var Dashboard = __webpack_require__(3);
-	      //React.render(Home(), document.getElementById('app'));
-	    });
-	  } else if (location.hash === '#admin') {
-	    __webpack_require__.e/* nsure */(2, function (require) {
-	      var Admin = __webpack_require__(4);
-	      //React.render(Home(), document.getElementById('app'));
-	    });
-	  }
-	};
-
-	window.onhashchange = route;
-
-	route();
-
-	if (false) {
-	  module.hot.accept(function () {
-	    route();
-	  });
-	}
-
-
-/***/ },
-/* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
 	if(false) {
@@ -198,12 +165,84 @@
 
 
 /***/ },
-/* 3 */,
-/* 4 */,
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	var angular = __webpack_require__(5);
+	var ngNewRouter = __webpack_require__(6);
+	__webpack_require__(3);
+	__webpack_require__(4);
+
+	angular.module("peachWeb", ["ngNewRouter", "peachWeb.dashboard", "peachWeb.admin"]).controller("PeachAppController", ["$router", PeachAppController]);
+
+	PeachAppController.$inject = ["$router"];
+
+	function PeachAppController($router) {
+	  $router.config([{ path: "/", redirectTo: "/dashboard" }, { path: "/dashboard", component: "dashboard" }, { path: "/admin/:canPass", component: "admin" }]);
+	}
+
+	module.exports = angular;
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	__webpack_require__(9);
+
+	var angular = __webpack_require__(5);
+
+	angular.module("peachWeb.dashboard", []).controller("DashboardController", [DashboardController]);
+
+	function DashboardController() {
+	  this.title = "My Dashboard";
+	}
+
+	DashboardController.prototype.canActivate = function () {};
+
+
+	console.log("loaded DashboardController");
+	/*require.ensure([], function (require) {
+	  require('./dashboard.lazy');
+	});*/
+
+/***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+
+	__webpack_require__(10);
+
+	var angular = __webpack_require__(5);
+
+	angular.module("peachWeb.admin", []).controller("AdminController", ["$routeParams", AdminController]);
+
+	function AdminController($routeParams) {
+	  this.title = "My Admin Panel";
+	  this.canPass = $routeParams.canPass === "1";
+	}
+
+	AdminController.prototype.canActivate = function () {
+	  if (this.canPass) {
+	    __webpack_require__.e/* nsure */(1, function (require) {
+	      __webpack_require__(8)(this);
+	    });
+	    return;
+	  }
+	  this.error = "Sorry, but you cant be back here";
+	};
+
+	console.log("loaded AdminController");
+
+/***/ },
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	__webpack_require__(10);
+	__webpack_require__(7);
 	module.exports = angular;
 
 
@@ -211,266 +250,1149 @@
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	// style-loader: Adds some css to the DOM by adding a <style> tag
+	'use strict';
 
-	// load the styles
-	var content = __webpack_require__(7);
-	if(typeof content === 'string') content = [[module.id, content, '']];
-	// add the styles to the DOM
-	var update = __webpack_require__(8)(content, {});
-	// Hot Module Replacement
-	if(false) {
-		// When the styles change, update the <style> tags
-		module.hot.accept("!!/Users/jason/git/peach/webpack/test-ng-webpack/node_modules/css-loader/index.js!/Users/jason/git/peach/webpack/test-ng-webpack/app/main.css", function() {
-			var newContent = require("!!/Users/jason/git/peach/webpack/test-ng-webpack/node_modules/css-loader/index.js!/Users/jason/git/peach/webpack/test-ng-webpack/app/main.css");
-			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-			update(newContent);
-		});
-		// When the module is disposed, remove the <style> tags
-		module.hot.dispose(function() { update(); });
+	/*
+	 * A module for adding new a routing system Angular 1.
+	 */
+	angular.module('ngNewRouter', ['ngNewRouter.generated']).
+	  value('$routeParams', {}).
+	  provider('$componentLoader', $componentLoaderProvider).
+	  directive('ngViewport', ngViewportDirective).
+	  directive('ngViewport', ngViewportFillContentDirective).
+	  directive('ngLink', ngLinkDirective);
+
+
+
+	/**
+	 * @name ngViewport
+	 *
+	 * @description
+	 * An ngViewport is where resolved content goes.
+	 *
+	 * ## Use
+	 *
+	 * ```html
+	 * <div router-viewport="name"></div>
+	 * ```
+	 *
+	 * The value for the `ngViewport` attribute is optional.
+	 */
+	function ngViewportDirective($animate, $compile, $controller, $templateRequest, $rootScope, $location, $componentLoader, $router) {
+	  var rootRouter = $router;
+
+	  $rootScope.$watch(function () {
+	    return $location.path();
+	  }, function (newUrl) {
+	    rootRouter.navigate(newUrl);
+	  });
+
+	  var nav = rootRouter.navigate;
+	  rootRouter.navigate = function (url) {
+	    return nav.call(this, url).then(function (newUrl) {
+	      if (newUrl) {
+	        $location.path(newUrl);
+	      }
+	    });
+	  }
+
+	  return {
+	    restrict: 'AE',
+	    transclude: 'element',
+	    terminal: true,
+	    priority: 400,
+	    require: ['?^^ngViewport', 'ngViewport'],
+	    link: viewportLink,
+	    controller: function() {},
+	    controllerAs: '$$ngViewport'
+	  };
+
+	  function viewportLink(scope, $element, attrs, ctrls, $transclude) {
+	    var viewportName = attrs.ngViewport || 'default',
+	        ctrl = ctrls[0],
+	        myCtrl = ctrls[1],
+	        router = (ctrl && ctrl.$$router) || rootRouter;
+
+	    var currentScope,
+	        newScope,
+	        currentElement,
+	        previousLeaveAnimation,
+	        previousInstruction;
+
+	    function cleanupLastView() {
+	      if (previousLeaveAnimation) {
+	        $animate.cancel(previousLeaveAnimation);
+	        previousLeaveAnimation = null;
+	      }
+
+	      if (currentScope) {
+	        currentScope.$destroy();
+	        currentScope = null;
+	      }
+	      if (currentElement) {
+	        previousLeaveAnimation = $animate.leave(currentElement);
+	        previousLeaveAnimation.then(function() {
+	          previousLeaveAnimation = null;
+	        });
+	        currentElement = null;
+	      }
+	    }
+
+	    function getComponentFromInstruction(instruction) {
+	      var component = instruction[0].handler.component;
+	      var componentName = typeof component === 'string' ? component : component[viewportName];
+	      return $componentLoader(componentName);
+	    }
+	    router.registerViewport({
+	      canDeactivate: function (instruction) {
+	        return !ctrl || !ctrl.canDeactivate || ctrl.canDeactivate();
+	      },
+	      canReactivate: function (instruction) {
+	        //TODO: expose controller hook
+	        return JSON.stringify(instruction) === previousInstruction;
+	      },
+	      instantiate: function (instruction) {
+	        var controllerName = getComponentFromInstruction(instruction).controllerName;
+	        var component = instruction[0].handler.component;
+	        var componentName = typeof component === 'string' ? component : component[viewportName];
+
+	        // build up locals for controller
+	        newScope = scope.$new();
+
+	        var locals = {
+	          $scope: newScope,
+	          $router: scope.$$ngViewport.$$router = router.childRouter()
+	        };
+
+	        if (router.context) {
+	          locals.$routeParams = router.context.params;
+	        }
+	        try {
+	          ctrl = $controller(controllerName, locals);
+	        } catch (e) {
+	          console.warn && console.warn('Could not instantiate controller', controllerName);
+	          ctrl = $controller(angular.noop, locals);
+	        }
+	        newScope[componentName] = ctrl;
+	      },
+	      canActivate: function (instruction) {
+	        return !ctrl || !ctrl.canActivate || ctrl.canActivate(instruction);
+	      },
+	      load: function (instruction) {
+	        var componentTemplateUrl = getComponentFromInstruction(instruction).template;
+	        return $templateRequest(componentTemplateUrl).then(function(templateHtml) {
+	          myCtrl.$$template = templateHtml;
+	        });
+	      },
+	      activate: function (instruction) {
+	        var component = instruction[0].handler.component;
+	        var componentName = typeof component === 'string' ? component : component[viewportName];
+
+	        var clone = $transclude(newScope, function(clone) {
+	          $animate.enter(clone, null, currentElement || $element);
+	          cleanupLastView();
+	        });
+
+	        currentElement = clone;
+	        currentScope = newScope;
+
+	        // finally, run the hook
+	        if (ctrl.activate) {
+	          ctrl.activate(instruction);
+	        }
+	        previousInstruction = JSON.stringify(instruction);
+	      }
+	    }, viewportName);
+	  }
 	}
+	ngViewportDirective.$inject = ["$animate", "$compile", "$controller", "$templateRequest", "$rootScope", "$location", "$componentLoader", "$router"];
+
+	function ngViewportFillContentDirective($compile) {
+	  return {
+	    restrict: 'EA',
+	    priority: -400,
+	    require: 'ngViewport',
+	    link: function(scope, $element, attrs, ctrl) {
+	      var template = ctrl.$$template;
+	      $element.html(template);
+	      var link = $compile($element.contents());
+	      link(scope);
+	    }
+	  };
+	}
+	ngViewportFillContentDirective.$inject = ["$compile"];
+
+	function makeComponentString(name) {
+	  return [
+	    '<router-component component-name="', name, '">',
+	    '</router-component>'
+	  ].join('');
+	}
+
+
+	var LINK_MICROSYNTAX_RE = /^(.+?)(?:\((.*)\))?$/;
+	/**
+	 * @name ngLink
+	 * @description
+	 * Lets you link to different parts of the app, and automatically generates hrefs.
+	 *
+	 * ## Use
+	 * The directive uses a simple syntax: `router-link="componentName({ param: paramValue })"`
+	 *
+	 * ## Example
+	 *
+	 * ```js
+	 * angular.module('myApp', ['ngFuturisticRouter'])
+	 *   .controller('AppController', ['router', function(router) {
+	 *     router.config({ path: '/user/:id' component: 'user' });
+	 *     this.user = { name: 'Brian', id: 123 };
+	 *   });
+	 * ```
+	 *
+	 * ```html
+	 * <div ng-controller="AppController as app">
+	 *   <a router-link="user({id: app.user.id})">{{app.user.name}}</a>
+	 * </div>
+	 * ```
+	 */
+	function ngLinkDirective($router, $location, $parse) {
+	  var rootRouter = $router;
+
+	  angular.element(document.body).on('click', function (ev) {
+	    var target = ev.target;
+	    if (target.attributes['ng-link']) {
+	      ev.preventDefault();
+	      var url = target.attributes.href.value;
+	      rootRouter.navigate(url);
+	    }
+	  });
+
+	  return {
+	    require: '?^^ngViewport',
+	    restrict: 'A',
+	    link: ngLinkDirectiveLinkFn
+	  };
+
+	  function ngLinkDirectiveLinkFn(scope, elt, attrs, ctrl) {
+	    var router = (ctrl && ctrl.$$router) || rootRouter;
+	    if (!router) {
+	      return;
+	    }
+
+	    var link = attrs.ngLink || '';
+	    var parts = link.match(LINK_MICROSYNTAX_RE);
+	    var routeName = parts[1];
+	    var routeParams = parts[2];
+	    var url;
+
+	    if (routeParams) {
+	      var routeParamsGetter = $parse(routeParams);
+	      // we can avoid adding a watcher if it's a literal
+	      if (routeParamsGetter.constant) {
+	        var params = routeParamsGetter();
+	        url = '.' + router.generate(routeName, params);
+	        elt.attr('href', url);
+	      } else {
+	        scope.$watch(function() {
+	          return routeParamsGetter(scope);
+	        }, function(params) {
+	          url = '.' + router.generate(routeName, params);
+	          elt.attr('href', url);
+	        }, true);
+	      }
+	    } else {
+	      url = '.' + router.generate(routeName);
+	      elt.attr('href', url);
+	    }
+	  }
+	}
+	ngLinkDirective.$inject = ["$router", "$location", "$parse"];
+
+
+	/**
+	 * @name $componentLoaderProvider
+	 * @description
+	 *
+	 * This lets you configure conventions for what controllers are named and where to load templates from.
+	 *
+	 * The default behavior is to dasherize and serve from `./components`. A component called `myWidget`
+	 * uses a controller named `MyWidgetController` and a template loaded from `./components/my-widget/my-widget.html`.
+	 *
+	 * A component is:
+	 * - a controller
+	 * - a template
+	 * - an optional router
+	 *
+	 * This service makes it easy to group all of them into a single concept.
+	 */
+	function $componentLoaderProvider() {
+	  var componentToCtrl = function componentToCtrlDefault(name) {
+	    return name[0].toUpperCase() +
+	        name.substr(1) +
+	        'Controller';
+	  };
+
+	  var componentToTemplate = function componentToTemplateDefault(name) {
+	    var dashName = dashCase(name);
+	    return './components/' + dashName + '/' + dashName + '.html';
+	  };
+
+	  function componentLoader(name) {
+	    return {
+	      controllerName: componentToCtrl(name),
+	      template: componentToTemplate(name)
+	    };
+	  }
+
+	  return {
+	    $get: function () {
+	      return componentLoader;
+	    },
+	    /**
+	     * @name $componentLoaderProvider#setCtrlNameMapping
+	     * @description takes a function for mapping component names to component controller names
+	     */
+	    setCtrlNameMapping: function(newFn) {
+	      componentToCtrl = newFn;
+	      return this;
+	    },
+	    /**
+	     * @name $componentLoaderProvider#setTemplateMapping
+	     * @description takes a function for mapping component names to component template URLs
+	     */
+	    setTemplateMapping: function(newFn) {
+	      componentToTemplate = newFn;
+	      return this;
+	    }
+	  };
+	}
+
+	function dashCase(str) {
+	  return str.replace(/([A-Z])/g, function ($1) {
+	    return '-' + $1.toLowerCase();
+	  });
+	}
+
+	angular.module('ngNewRouter.generated', []).factory('$router', ['$q', function($q) {/*
+	 * artisinal, handcrafted subset of the traceur runtime for picky webdevs
+	 */
+
+	var $defineProperty = Object.defineProperty,
+	    $defineProperties = Object.defineProperties,
+	    $create = Object.create,
+	    $getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor,
+	    $getOwnPropertyNames = Object.getOwnPropertyNames;
+
+	function createClass(ctor, object, staticObject, superClass) {
+	  $defineProperty(object, 'constructor', {
+	    value: ctor,
+	    configurable: true,
+	    enumerable: false,
+	    writable: true
+	  });
+	  if (arguments.length > 3) {
+	    if (typeof superClass === 'function')
+	      ctor.__proto__ = superClass;
+	    ctor.prototype = $create(getProtoParent(superClass), getDescriptors(object));
+	  } else {
+	    ctor.prototype = object;
+	  }
+	  $defineProperty(ctor, 'prototype', {
+	    configurable: false,
+	    writable: false
+	  });
+	  return $defineProperties(ctor, getDescriptors(staticObject));
+	}
+
+	function getProtoParent(superClass) {
+	  if (typeof superClass === 'function') {
+	    var prototype = superClass.prototype;
+	    if (Object(prototype) === prototype || prototype === null)
+	      return superClass.prototype;
+	    throw new TypeError('super prototype must be an Object or null');
+	  }
+	  if (superClass === null)
+	    return null;
+	  throw new TypeError(("Super expression must either be null or a function, not " + typeof superClass + "."));
+	}
+
+	function getDescriptors(object) {
+	  var descriptors = {};
+	  var names = $getOwnPropertyNames(object);
+	  for (var i = 0; i < names.length; i++) {
+	    var name = names[i];
+	    descriptors[name] = $getOwnPropertyDescriptor(object, name);
+	  }
+	  // TODO: someday you might use symbols and you'll have to re-evaluate
+	  //       your life choices that led to the creation of this file
+
+	  // var symbols = getOwnPropertySymbols(object);
+	  // for (var i = 0; i < symbols.length; i++) {
+	  //   var symbol = symbols[i];
+	  //   descriptors[$traceurRuntime.toProperty(symbol)] = $getOwnPropertyDescriptor(object, $traceurRuntime.toProperty(symbol));
+	  // }
+	  return descriptors;
+	};
+
+	  "use strict";
+	  var RouteRecognizer = (function() {
+	    var map = (function() {
+	      function Target(path, matcher, delegate) {
+	        this.path = path;
+	        this.matcher = matcher;
+	        this.delegate = delegate;
+	      }
+	      Target.prototype = {to: function(target, callback) {
+	          var delegate = this.delegate;
+	          if (delegate && delegate.willAddRoute) {
+	            target = delegate.willAddRoute(this.matcher.target, target);
+	          }
+	          this.matcher.add(this.path, target);
+	          if (callback) {
+	            if (callback.length === 0) {
+	              throw new Error("You must have an argument in the function passed to `to`");
+	            }
+	            this.matcher.addChild(this.path, target, callback, this.delegate);
+	          }
+	          return this;
+	        }};
+	      function Matcher(target) {
+	        this.routes = {};
+	        this.children = {};
+	        this.target = target;
+	      }
+	      Matcher.prototype = {
+	        add: function(path, handler) {
+	          this.routes[path] = handler;
+	        },
+	        addChild: function(path, target, callback, delegate) {
+	          var matcher = new Matcher(target);
+	          this.children[path] = matcher;
+	          var match = generateMatch(path, matcher, delegate);
+	          if (delegate && delegate.contextEntered) {
+	            delegate.contextEntered(target, match);
+	          }
+	          callback(match);
+	        }
+	      };
+	      function generateMatch(startingPath, matcher, delegate) {
+	        return function(path, nestedCallback) {
+	          var fullPath = startingPath + path;
+	          if (nestedCallback) {
+	            nestedCallback(generateMatch(fullPath, matcher, delegate));
+	          } else {
+	            return new Target(startingPath + path, matcher, delegate);
+	          }
+	        };
+	      }
+	      function addRoute(routeArray, path, handler) {
+	        var len = 0;
+	        for (var i = 0,
+	            l = routeArray.length; i < l; i++) {
+	          len += routeArray[i].path.length;
+	        }
+	        path = path.substr(len);
+	        var route = {
+	          path: path,
+	          handler: handler
+	        };
+	        routeArray.push(route);
+	      }
+	      function eachRoute(baseRoute, matcher, callback, binding) {
+	        var routes = matcher.routes;
+	        for (var path in routes) {
+	          if (routes.hasOwnProperty(path)) {
+	            var routeArray = baseRoute.slice();
+	            addRoute(routeArray, path, routes[path]);
+	            if (matcher.children[path]) {
+	              eachRoute(routeArray, matcher.children[path], callback, binding);
+	            } else {
+	              callback.call(binding, routeArray);
+	            }
+	          }
+	        }
+	      }
+	      return function(callback, addRouteCallback) {
+	        var matcher = new Matcher();
+	        callback(generateMatch("", matcher, this.delegate));
+	        eachRoute([], matcher, function(route) {
+	          if (addRouteCallback) {
+	            addRouteCallback(this, route);
+	          } else {
+	            this.add(route);
+	          }
+	        }, this);
+	      };
+	    }());
+	    ;
+	    var specials = ['/', '.', '*', '+', '?', '|', '(', ')', '[', ']', '{', '}', '\\'];
+	    var escapeRegex = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
+	    function isArray(test) {
+	      return Object.prototype.toString.call(test) === "[object Array]";
+	    }
+	    function StaticSegment(string) {
+	      this.string = string;
+	    }
+	    StaticSegment.prototype = {
+	      eachChar: function(callback) {
+	        var string = this.string,
+	            ch;
+	        for (var i = 0,
+	            l = string.length; i < l; i++) {
+	          ch = string.charAt(i);
+	          callback({validChars: ch});
+	        }
+	      },
+	      regex: function() {
+	        return this.string.replace(escapeRegex, '\\$1');
+	      },
+	      generate: function() {
+	        return this.string;
+	      }
+	    };
+	    function DynamicSegment(name) {
+	      this.name = name;
+	    }
+	    DynamicSegment.prototype = {
+	      eachChar: function(callback) {
+	        callback({
+	          invalidChars: "/",
+	          repeat: true
+	        });
+	      },
+	      regex: function() {
+	        return "([^/]+)";
+	      },
+	      generate: function(params) {
+	        return params[this.name];
+	      }
+	    };
+	    function StarSegment(name) {
+	      this.name = name;
+	    }
+	    StarSegment.prototype = {
+	      eachChar: function(callback) {
+	        callback({
+	          invalidChars: "",
+	          repeat: true
+	        });
+	      },
+	      regex: function() {
+	        return "(.+)";
+	      },
+	      generate: function(params) {
+	        return params[this.name];
+	      }
+	    };
+	    function EpsilonSegment() {}
+	    EpsilonSegment.prototype = {
+	      eachChar: function() {},
+	      regex: function() {
+	        return "";
+	      },
+	      generate: function() {
+	        return "";
+	      }
+	    };
+	    function parse(route, names, types) {
+	      if (route.charAt(0) === "/") {
+	        route = route.substr(1);
+	      }
+	      var segments = route.split("/"),
+	          results = [];
+	      for (var i = 0,
+	          l = segments.length; i < l; i++) {
+	        var segment = segments[i],
+	            match;
+	        if (match = segment.match(/^:([^\/]+)$/)) {
+	          results.push(new DynamicSegment(match[1]));
+	          names.push(match[1]);
+	          types.dynamics++;
+	        } else if (match = segment.match(/^\*([^\/]+)$/)) {
+	          results.push(new StarSegment(match[1]));
+	          names.push(match[1]);
+	          types.stars++;
+	        } else if (segment === "") {
+	          results.push(new EpsilonSegment());
+	        } else {
+	          results.push(new StaticSegment(segment));
+	          types.statics++;
+	        }
+	      }
+	      return results;
+	    }
+	    function State(charSpec) {
+	      this.charSpec = charSpec;
+	      this.nextStates = [];
+	    }
+	    State.prototype = {
+	      get: function(charSpec) {
+	        var nextStates = this.nextStates;
+	        for (var i = 0,
+	            l = nextStates.length; i < l; i++) {
+	          var child = nextStates[i];
+	          var isEqual = child.charSpec.validChars === charSpec.validChars;
+	          isEqual = isEqual && child.charSpec.invalidChars === charSpec.invalidChars;
+	          if (isEqual) {
+	            return child;
+	          }
+	        }
+	      },
+	      put: function(charSpec) {
+	        var state;
+	        if (state = this.get(charSpec)) {
+	          return state;
+	        }
+	        state = new State(charSpec);
+	        this.nextStates.push(state);
+	        if (charSpec.repeat) {
+	          state.nextStates.push(state);
+	        }
+	        return state;
+	      },
+	      match: function(ch) {
+	        var nextStates = this.nextStates,
+	            child,
+	            charSpec,
+	            chars;
+	        var returned = [];
+	        for (var i = 0,
+	            l = nextStates.length; i < l; i++) {
+	          child = nextStates[i];
+	          charSpec = child.charSpec;
+	          if (typeof(chars = charSpec.validChars) !== 'undefined') {
+	            if (chars.indexOf(ch) !== -1) {
+	              returned.push(child);
+	            }
+	          } else if (typeof(chars = charSpec.invalidChars) !== 'undefined') {
+	            if (chars.indexOf(ch) === -1) {
+	              returned.push(child);
+	            }
+	          }
+	        }
+	        return returned;
+	      }
+	    };
+	    function sortSolutions(states) {
+	      return states.sort(function(a, b) {
+	        if (a.types.stars !== b.types.stars) {
+	          return a.types.stars - b.types.stars;
+	        }
+	        if (a.types.stars) {
+	          if (a.types.statics !== b.types.statics) {
+	            return b.types.statics - a.types.statics;
+	          }
+	          if (a.types.dynamics !== b.types.dynamics) {
+	            return b.types.dynamics - a.types.dynamics;
+	          }
+	        }
+	        if (a.types.dynamics !== b.types.dynamics) {
+	          return a.types.dynamics - b.types.dynamics;
+	        }
+	        if (a.types.statics !== b.types.statics) {
+	          return b.types.statics - a.types.statics;
+	        }
+	        return 0;
+	      });
+	    }
+	    function recognizeChar(states, ch) {
+	      var nextStates = [];
+	      for (var i = 0,
+	          l = states.length; i < l; i++) {
+	        var state = states[i];
+	        nextStates = nextStates.concat(state.match(ch));
+	      }
+	      return nextStates;
+	    }
+	    var oCreate = Object.create || function(proto) {
+	      function F() {}
+	      F.prototype = proto;
+	      return new F();
+	    };
+	    function RecognizeResults(queryParams) {
+	      this.queryParams = queryParams || {};
+	    }
+	    RecognizeResults.prototype = oCreate({
+	      splice: Array.prototype.splice,
+	      slice: Array.prototype.slice,
+	      push: Array.prototype.push,
+	      length: 0,
+	      queryParams: null
+	    });
+	    function findHandler(state, path, queryParams) {
+	      var handlers = state.handlers,
+	          regex = state.regex;
+	      var captures = path.match(regex),
+	          currentCapture = 1;
+	      var result = new RecognizeResults(queryParams);
+	      for (var i = 0,
+	          l = handlers.length; i < l; i++) {
+	        var handler = handlers[i],
+	            names = handler.names,
+	            params = {};
+	        for (var j = 0,
+	            m = names.length; j < m; j++) {
+	          params[names[j]] = captures[currentCapture++];
+	        }
+	        result.push({
+	          handler: handler.handler,
+	          params: params,
+	          isDynamic: !!names.length
+	        });
+	      }
+	      return result;
+	    }
+	    function addSegment(currentState, segment) {
+	      segment.eachChar(function(ch) {
+	        var state;
+	        currentState = currentState.put(ch);
+	      });
+	      return currentState;
+	    }
+	    var RouteRecognizer = function() {
+	      this.rootState = new State();
+	      this.names = {};
+	    };
+	    RouteRecognizer.prototype = {
+	      add: function(routes, options) {
+	        var currentState = this.rootState,
+	            regex = "^",
+	            types = {
+	              statics: 0,
+	              dynamics: 0,
+	              stars: 0
+	            },
+	            handlers = [],
+	            allSegments = [],
+	            name;
+	        var isEmpty = true;
+	        for (var i = 0,
+	            l = routes.length; i < l; i++) {
+	          var route = routes[i],
+	              names = [];
+	          var segments = parse(route.path, names, types);
+	          allSegments = allSegments.concat(segments);
+	          for (var j = 0,
+	              m = segments.length; j < m; j++) {
+	            var segment = segments[j];
+	            if (segment instanceof EpsilonSegment) {
+	              continue;
+	            }
+	            isEmpty = false;
+	            currentState = currentState.put({validChars: "/"});
+	            regex += "/";
+	            currentState = addSegment(currentState, segment);
+	            regex += segment.regex();
+	          }
+	          var handler = {
+	            handler: route.handler,
+	            names: names
+	          };
+	          handlers.push(handler);
+	        }
+	        if (isEmpty) {
+	          currentState = currentState.put({validChars: "/"});
+	          regex += "/";
+	        }
+	        currentState.handlers = handlers;
+	        currentState.regex = new RegExp(regex + "$");
+	        currentState.types = types;
+	        if (name = options && options.as) {
+	          this.names[name] = {
+	            segments: allSegments,
+	            handlers: handlers
+	          };
+	        }
+	      },
+	      handlersFor: function(name) {
+	        var route = this.names[name],
+	            result = [];
+	        if (!route) {
+	          throw new Error("There is no route named " + name);
+	        }
+	        for (var i = 0,
+	            l = route.handlers.length; i < l; i++) {
+	          result.push(route.handlers[i]);
+	        }
+	        return result;
+	      },
+	      hasRoute: function(name) {
+	        return !!this.names[name];
+	      },
+	      generate: function(name, params) {
+	        var route = this.names[name],
+	            output = "";
+	        if (!route) {
+	          throw new Error("There is no route named " + name);
+	        }
+	        var segments = route.segments;
+	        for (var i = 0,
+	            l = segments.length; i < l; i++) {
+	          var segment = segments[i];
+	          if (segment instanceof EpsilonSegment) {
+	            continue;
+	          }
+	          output += "/";
+	          output += segment.generate(params);
+	        }
+	        if (output.charAt(0) !== '/') {
+	          output = '/' + output;
+	        }
+	        if (params && params.queryParams) {
+	          output += this.generateQueryString(params.queryParams, route.handlers);
+	        }
+	        return output;
+	      },
+	      generateQueryString: function(params, handlers) {
+	        var pairs = [];
+	        var keys = [];
+	        for (var key in params) {
+	          if (params.hasOwnProperty(key)) {
+	            keys.push(key);
+	          }
+	        }
+	        keys.sort();
+	        for (var i = 0,
+	            len = keys.length; i < len; i++) {
+	          key = keys[i];
+	          var value = params[key];
+	          if (value == null) {
+	            continue;
+	          }
+	          var pair = encodeURIComponent(key);
+	          if (isArray(value)) {
+	            for (var j = 0,
+	                l = value.length; j < l; j++) {
+	              var arrayPair = key + '[]' + '=' + encodeURIComponent(value[j]);
+	              pairs.push(arrayPair);
+	            }
+	          } else {
+	            pair += "=" + encodeURIComponent(value);
+	            pairs.push(pair);
+	          }
+	        }
+	        if (pairs.length === 0) {
+	          return '';
+	        }
+	        return "?" + pairs.join("&");
+	      },
+	      parseQueryString: function(queryString) {
+	        var pairs = queryString.split("&"),
+	            queryParams = {};
+	        for (var i = 0; i < pairs.length; i++) {
+	          var pair = pairs[i].split('='),
+	              key = decodeURIComponent(pair[0]),
+	              keyLength = key.length,
+	              isArray = false,
+	              value;
+	          if (pair.length === 1) {
+	            value = 'true';
+	          } else {
+	            if (keyLength > 2 && key.slice(keyLength - 2) === '[]') {
+	              isArray = true;
+	              key = key.slice(0, keyLength - 2);
+	              if (!queryParams[key]) {
+	                queryParams[key] = [];
+	              }
+	            }
+	            value = pair[1] ? decodeURIComponent(pair[1]) : '';
+	          }
+	          if (isArray) {
+	            queryParams[key].push(value);
+	          } else {
+	            queryParams[key] = value;
+	          }
+	        }
+	        return queryParams;
+	      },
+	      recognize: function(path) {
+	        var states = [this.rootState],
+	            pathLen,
+	            i,
+	            l,
+	            queryStart,
+	            queryParams = {},
+	            isSlashDropped = false;
+	        queryStart = path.indexOf('?');
+	        if (queryStart !== -1) {
+	          var queryString = path.substr(queryStart + 1, path.length);
+	          path = path.substr(0, queryStart);
+	          queryParams = this.parseQueryString(queryString);
+	        }
+	        path = decodeURI(path);
+	        if (path.charAt(0) !== "/") {
+	          path = "/" + path;
+	        }
+	        pathLen = path.length;
+	        if (pathLen > 1 && path.charAt(pathLen - 1) === "/") {
+	          path = path.substr(0, pathLen - 1);
+	          isSlashDropped = true;
+	        }
+	        for (i = 0, l = path.length; i < l; i++) {
+	          states = recognizeChar(states, path.charAt(i));
+	          if (!states.length) {
+	            break;
+	          }
+	        }
+	        var solutions = [];
+	        for (i = 0, l = states.length; i < l; i++) {
+	          if (states[i].handlers) {
+	            solutions.push(states[i]);
+	          }
+	        }
+	        states = sortSolutions(solutions);
+	        var state = solutions[0];
+	        if (state && state.handlers) {
+	          if (isSlashDropped && state.regex.source.slice(-5) === "(.+)$") {
+	            path = path + "/";
+	          }
+	          return findHandler(state, path, queryParams);
+	        }
+	      }
+	    };
+	    RouteRecognizer.prototype.map = map;
+	    RouteRecognizer.VERSION = 'VERSION_STRING_PLACEHOLDER';
+	    return RouteRecognizer;
+	  }());
+	  ;
+	  var CHILD_ROUTE_SUFFIX = '/*childRoute';
+	  var Router = function Router(parent, configPrefix) {
+	    this.parent = parent || null;
+	    this.navigating = false;
+	    this.ports = {};
+	    this.rewrites = {};
+	    this.children = [];
+	    this.context = null;
+	    this.recognizer = new RouteRecognizer();
+	  };
+	  var $Router = Router;
+	  (createClass)(Router, {
+	    childRouter: function() {
+	      var child = new $Router(this);
+	      this.children.push(child);
+	      return child;
+	    },
+	    registerViewport: function(view) {
+	      var name = arguments[1] !== (void 0) ? arguments[1] : 'default';
+	      if (this.ports[name]) {
+	        throw new Error(name + ' viewport is already registered');
+	      }
+	      this.ports[name] = view;
+	      return this.renavigate();
+	    },
+	    config: function(mapping) {
+	      var $__0 = this;
+	      if (mapping instanceof Array) {
+	        mapping.forEach((function(nav) {
+	          return $__0.configOne(nav);
+	        }));
+	      } else {
+	        this.configOne(mapping);
+	      }
+	      return this.renavigate();
+	    },
+	    configOne: function(mapping) {
+	      if (mapping.redirectTo) {
+	        this.rewrites[mapping.path] = mapping.redirectTo;
+	        return;
+	      }
+	      var component = mapping.component;
+	      if (typeof component === 'string') {
+	        mapping.handler = {component: component};
+	      } else if (typeof component === 'function') {
+	        mapping.handler = component();
+	      } else if (!mapping.handler) {
+	        mapping.handler = {component: component};
+	      }
+	      this.recognizer.add([mapping], {as: component});
+	      var withChild = copy(mapping);
+	      withChild.path += CHILD_ROUTE_SUFFIX;
+	      this.recognizer.add([{
+	        path: withChild.path,
+	        handler: withChild
+	      }]);
+	    },
+	    navigate: function(url) {
+	      var $__0 = this;
+	      if (url[0] === '.') {
+	        url = url.substr(1);
+	      }
+	      var self = this;
+	      if (this.navigating) {
+	        return $q.when();
+	      }
+	      url = this.getCanonicalUrl(url);
+	      this.lastNavigationAttempt = url;
+	      var context = this.recognizer.recognize(url);
+	      var segment = url;
+	      if (notMatched(context)) {
+	        return $q.when();
+	      }
+	      var lastParams = context[context.length - 1].params;
+	      if (lastParams && lastParams.childRoute) {
+	        var path = context[0].handler.path;
+	        segment = path.substr(0, path.length - CHILD_ROUTE_SUFFIX.length);
+	        if (this.previousSegment === segment) {
+	          startNavigating();
+	          return this.navigateChildren(context).then(finishNavigating, cancelNavigating);
+	        }
+	      }
+	      if (this.context === context[0]) {
+	        return $q.when();
+	      }
+	      this.context = context[0];
+	      this.fullContext = context;
+	      this.navigating = true;
+	      context.component = this.context.handler.component;
+	      return this.canNavigate(context).then((function(status) {
+	        return (status && $__0.activatePorts(context));
+	      })).then(finishNavigating, cancelNavigating);
+	      function startNavigating() {
+	        self.context = context[0];
+	        self.fullContext = context;
+	        self.navigating = true;
+	      }
+	      function finishNavigating(childUrl) {
+	        self.navigating = false;
+	        self.previousSegment = segment;
+	        self.previousContext = context;
+	        return self.previousUrl = segment + (childUrl || '');
+	      }
+	      function cancelNavigating() {
+	        self.previousUrl = url;
+	        self.navigating = false;
+	      }
+	    },
+	    getCanonicalUrl: function(url) {
+	      forEach(this.rewrites, function(toUrl, fromUrl) {
+	        if (fromUrl === '/') {
+	          if (url === '/') {
+	            url = toUrl;
+	          }
+	        } else if (url.indexOf(fromUrl) === 0) {
+	          url = url.replace(fromUrl, toUrl);
+	        }
+	      });
+	      return url;
+	    },
+	    renavigate: function() {
+	      var renavigateDestination = this.previousUrl || this.lastNavigationAttempt;
+	      if (!this.navigating && renavigateDestination) {
+	        return this.navigate(renavigateDestination);
+	      } else {
+	        return $q.when();
+	      }
+	    },
+	    navigateChildren: function(context) {
+	      if (context[0].params.childRoute || this.children.length > 0) {
+	        var subNav = '/' + (context[0].params.childRoute || '');
+	        return $q.all(this.children.map((function(child) {
+	          return child.navigate(subNav);
+	        }))).then((function(childUrls) {
+	          return childUrls[0];
+	        }));
+	      }
+	      return $q.when();
+	    },
+	    generate: function(name, params) {
+	      var router = this,
+	          prefix = '';
+	      while (router && !router.recognizer.hasRoute(name)) {
+	        router = router.parent;
+	      }
+	      if (!router) {
+	        return '';
+	      }
+	      var path = router.recognizer.generate(name, params);
+	      while (router = router.parent) {
+	        prefix += router.previousSegment;
+	      }
+	      return prefix + path;
+	    },
+	    activatePorts: function(context) {
+	      var $__0 = this;
+	      var activations = mapObj(this.ports, (function(port) {
+	        return $q.when(port.canReactivate && port.canReactivate(context)).then((function(status) {
+	          if (status) {
+	            return $q.when(!port.reactivate || port.reactivate(context));
+	          }
+	          return $q.when(port.deactivate && port.deactivate(context)).then(port.activate(context));
+	        }));
+	      }));
+	      return $q.all(activations).then((function() {
+	        return $__0.navigateChildren(context);
+	      }));
+	    },
+	    canNavigate: function(context) {
+	      return $q.all(this.gatherNagigationPredicates(context)).then(booleanReduction);
+	    },
+	    gatherNagigationPredicates: function(context) {
+	      return this.children.reduce((function(promises, child) {
+	        return promises.concat(child.gatherNagigationPredicates(context));
+	      }), [this.navigationPredicate(context)]);
+	    },
+	    navigationPredicate: function(context) {
+	      return this.queryViewports((function(port) {
+	        return $q.when(port.canReactivate && port.canReactivate(context)).then((function(status) {
+	          if (status) {
+	            return true;
+	          }
+	          return $q.when(!port.canDeactivate || port.canDeactivate(context)).then((function(status) {
+	            if (status) {
+	              port.instantiate(context);
+	              return $q.when(port.load(context)).then((function() {
+	                return $q.when(!port.canActivate || port.canActivate(context));
+	              }));
+	            }
+	            return false;
+	          }));
+	        }));
+	      }));
+	    },
+	    queryViewports: function(fn) {
+	      var allViewportQueries = mapObj(this.ports, fn);
+	      return $q.all(allViewportQueries).then(booleanReduction).then(boolToPromise);
+	    }
+	  }, {});
+	  Object.defineProperty(Router.prototype.generate, "parameters", {get: function() {
+	      return [[$traceurRuntime.type.string], []];
+	    }});
+	  function copy(obj) {
+	    return JSON.parse(JSON.stringify(obj));
+	  }
+	  function notMatched(context) {
+	    return context == null || context.length < 1;
+	  }
+	  function forEach(obj, fn) {
+	    Object.keys(obj).forEach((function(key) {
+	      return fn(obj[key], key);
+	    }));
+	  }
+	  function mapObj(obj, fn) {
+	    var result = [];
+	    Object.keys(obj).forEach((function(key) {
+	      return result.push(fn(obj[key], key));
+	    }));
+	    return result;
+	  }
+	  function booleanReduction(arr) {
+	    return arr.reduce((function(acc, val) {
+	      return acc && val;
+	    }), true);
+	  }
+	  function boolToPromise(value) {
+	    return value ? $q.when(value) : $q.reject();
+	  }
+
+	return new Router();}]);
 
 /***/ },
 /* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(11)();
-	exports.push([module.id, "@font-face {\n    font-family: 'test';\n    src: url("+__webpack_require__(12)+") format('woff');\n}\nbody {\n    font-family: 'test';\n    background-image: url("+__webpack_require__(13)+");\n}\n", ""]);
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/*
-		MIT License http://www.opensource.org/licenses/mit-license.php
-		Author Tobias Koppers @sokra
-	*/
-	var stylesInDom = {},
-		memoize = function(fn) {
-			var memo;
-			return function () {
-				if (typeof memo === "undefined") memo = fn.apply(this, arguments);
-				return memo;
-			};
-		},
-		isIE9 = memoize(function() {
-			return /msie 9\b/.test(window.navigator.userAgent.toLowerCase());
-		}),
-		getHeadElement = memoize(function () {
-			return document.head || document.getElementsByTagName("head")[0];
-		}),
-		singletonElement = null,
-		singletonCounter = 0;
-
-	module.exports = function(list, options) {
-		if(false) {
-			if(typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
-		}
-
-		options = options || {};
-		// Force single-tag solution on IE9, which has a hard limit on the # of <style>
-		// tags it will allow on a page
-		if (typeof options.singleton === "undefined") options.singleton = isIE9();
-
-		var styles = listToStyles(list);
-		addStylesToDom(styles, options);
-
-		return function update(newList) {
-			var mayRemove = [];
-			for(var i = 0; i < styles.length; i++) {
-				var item = styles[i];
-				var domStyle = stylesInDom[item.id];
-				domStyle.refs--;
-				mayRemove.push(domStyle);
-			}
-			if(newList) {
-				var newStyles = listToStyles(newList);
-				addStylesToDom(newStyles, options);
-			}
-			for(var i = 0; i < mayRemove.length; i++) {
-				var domStyle = mayRemove[i];
-				if(domStyle.refs === 0) {
-					for(var j = 0; j < domStyle.parts.length; j++)
-						domStyle.parts[j]();
-					delete stylesInDom[domStyle.id];
-				}
-			}
-		};
-	}
-
-	function addStylesToDom(styles, options) {
-		for(var i = 0; i < styles.length; i++) {
-			var item = styles[i];
-			var domStyle = stylesInDom[item.id];
-			if(domStyle) {
-				domStyle.refs++;
-				for(var j = 0; j < domStyle.parts.length; j++) {
-					domStyle.parts[j](item.parts[j]);
-				}
-				for(; j < item.parts.length; j++) {
-					domStyle.parts.push(addStyle(item.parts[j], options));
-				}
-			} else {
-				var parts = [];
-				for(var j = 0; j < item.parts.length; j++) {
-					parts.push(addStyle(item.parts[j], options));
-				}
-				stylesInDom[item.id] = {id: item.id, refs: 1, parts: parts};
-			}
-		}
-	}
-
-	function listToStyles(list) {
-		var styles = [];
-		var newStyles = {};
-		for(var i = 0; i < list.length; i++) {
-			var item = list[i];
-			var id = item[0];
-			var css = item[1];
-			var media = item[2];
-			var sourceMap = item[3];
-			var part = {css: css, media: media, sourceMap: sourceMap};
-			if(!newStyles[id])
-				styles.push(newStyles[id] = {id: id, parts: [part]});
-			else
-				newStyles[id].parts.push(part);
-		}
-		return styles;
-	}
-
-	function createStyleElement() {
-		var styleElement = document.createElement("style");
-		var head = getHeadElement();
-		styleElement.type = "text/css";
-		head.appendChild(styleElement);
-		return styleElement;
-	}
-
-	function addStyle(obj, options) {
-		var styleElement, update, remove;
-
-		if (options.singleton) {
-			var styleIndex = singletonCounter++;
-			styleElement = singletonElement || (singletonElement = createStyleElement());
-			update = applyToSingletonTag.bind(null, styleElement, styleIndex, false);
-			remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true);
-		} else {
-			styleElement = createStyleElement();
-			update = applyToTag.bind(null, styleElement);
-			remove = function () {
-				styleElement.parentNode.removeChild(styleElement);
-			};
-		}
-
-		update(obj);
-
-		return function updateStyle(newObj) {
-			if(newObj) {
-				if(newObj.css === obj.css && newObj.media === obj.media && newObj.sourceMap === obj.sourceMap)
-					return;
-				update(obj = newObj);
-			} else {
-				remove();
-			}
-		};
-	}
-
-	function replaceText(source, id, replacement) {
-		var boundaries = ["/** >>" + id + " **/", "/** " + id + "<< **/"];
-		var start = source.lastIndexOf(boundaries[0]);
-		var wrappedReplacement = replacement
-			? (boundaries[0] + replacement + boundaries[1])
-			: "";
-		if (source.lastIndexOf(boundaries[0]) >= 0) {
-			var end = source.lastIndexOf(boundaries[1]) + boundaries[1].length;
-			return source.slice(0, start) + wrappedReplacement + source.slice(end);
-		} else {
-			return source + wrappedReplacement;
-		}
-	}
-
-	function applyToSingletonTag(styleElement, index, remove, obj) {
-		var css = remove ? "" : obj.css;
-
-		if(styleElement.styleSheet) {
-			styleElement.styleSheet.cssText = replaceText(styleElement.styleSheet.cssText, index, css);
-		} else {
-			var cssNode = document.createTextNode(css);
-			var childNodes = styleElement.childNodes;
-			if (childNodes[index]) styleElement.removeChild(childNodes[index]);
-			if (childNodes.length) {
-				styleElement.insertBefore(cssNode, childNodes[index]);
-			} else {
-				styleElement.appendChild(cssNode);
-			}
-		}
-	}
-
-	function applyToTag(styleElement, obj) {
-		var css = obj.css;
-		var media = obj.media;
-		var sourceMap = obj.sourceMap;
-
-		if(sourceMap && typeof btoa === "function") {
-			try {
-				css += "\n/*# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(sourceMap)) + " */";
-				css = "@import url(\"data:text/css;base64," + btoa(css) + "\")";
-			} catch(e) {}
-		}
-
-		if(media) {
-			styleElement.setAttribute("media", media)
-		}
-
-		if(styleElement.styleSheet) {
-			styleElement.styleSheet.cssText = css;
-		} else {
-			while(styleElement.firstChild) {
-				styleElement.removeChild(styleElement.firstChild);
-			}
-			styleElement.appendChild(document.createTextNode(css));
-		}
-	}
-
-
-/***/ },
-/* 9 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	var angular = __webpack_require__(5);
-
-	angular.module('myPeachApp', [__webpack_require__(14)])
-	  .config(myPeachAppConfig);
-
-	myPeachAppConfig.$inject = ['$routeProvider'];
-
-	function myPeachAppConfig($routeProvider) {
-	  $routeProvider
-	    .when('/', {
-	      templateUrl: 'app/dashboard/dashboard.html',
-	      controller: 'DashboardController',
-	      controllerAs: 'vm',
-	      resolve: {
-
-	      }
-	    })
-	    .otherwise({
-	      redirectTo: '/'
-	    });
-	}
-
-	module.exports = angular;
-
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var require;/**
-	 * @license AngularJS v1.3.14
-	 * (c) 2010-2014 Google, Inc. http://angularjs.org
+	/**
+	 * @license AngularJS v1.4.0-beta.5
+	 * (c) 2010-2015 Google, Inc. http://angularjs.org
 	 * License: MIT
 	 */
 	(function(window, document, undefined) {'use strict';
@@ -508,28 +1430,33 @@
 	function minErr(module, ErrorConstructor) {
 	  ErrorConstructor = ErrorConstructor || Error;
 	  return function() {
-	    var code = arguments[0],
-	      prefix = '[' + (module ? module + ':' : '') + code + '] ',
-	      template = arguments[1],
-	      templateArgs = arguments,
+	    var SKIP_INDEXES = 2;
 
-	      message, i;
+	    var templateArgs = arguments,
+	      code = templateArgs[0],
+	      message = '[' + (module ? module + ':' : '') + code + '] ',
+	      template = templateArgs[1],
+	      paramPrefix, i;
 
-	    message = prefix + template.replace(/\{\d+\}/g, function(match) {
-	      var index = +match.slice(1, -1), arg;
+	    message += template.replace(/\{\d+\}/g, function(match) {
+	      var index = +match.slice(1, -1),
+	        shiftedIndex = index + SKIP_INDEXES;
 
-	      if (index + 2 < templateArgs.length) {
-	        return toDebugString(templateArgs[index + 2]);
+	      if (shiftedIndex < templateArgs.length) {
+	        return toDebugString(templateArgs[shiftedIndex]);
 	      }
+
 	      return match;
 	    });
 
-	    message = message + '\nhttp://errors.angularjs.org/1.3.14/' +
+	    message += '\nhttp://errors.angularjs.org/1.4.0-beta.5/' +
 	      (module ? module + '/' : '') + code;
-	    for (i = 2; i < arguments.length; i++) {
-	      message = message + (i == 2 ? '?' : '&') + 'p' + (i - 2) + '=' +
-	        encodeURIComponent(toDebugString(arguments[i]));
+
+	    for (i = SKIP_INDEXES, paramPrefix = '?'; i < templateArgs.length; i++, paramPrefix = '&') {
+	      message += paramPrefix + 'p' + (i - SKIP_INDEXES) + '=' +
+	        encodeURIComponent(toDebugString(templateArgs[i]));
 	    }
+
 	    return new ErrorConstructor(message);
 	  };
 	}
@@ -556,13 +1483,12 @@
 	  nodeName_: true,
 	  isArrayLike: true,
 	  forEach: true,
-	  sortedKeys: true,
 	  forEachSorted: true,
 	  reverseParams: true,
 	  nextUid: true,
 	  setHashKey: true,
 	  extend: true,
-	  int: true,
+	  toInt: true,
 	  inherit: true,
 	  noop: true,
 	  identity: true,
@@ -593,6 +1519,7 @@
 	  shallowCopy: true,
 	  equals: true,
 	  csp: true,
+	  jq: true,
 	  concat: true,
 	  sliceArgs: true,
 	  bind: true,
@@ -806,12 +1733,8 @@
 	  return obj;
 	}
 
-	function sortedKeys(obj) {
-	  return Object.keys(obj).sort();
-	}
-
 	function forEachSorted(obj, iterator, context) {
-	  var keys = sortedKeys(obj);
+	  var keys = Object.keys(obj).sort();
 	  for (var i = 0; i < keys.length; i++) {
 	    iterator.call(context, obj[keys[i]], keys[i]);
 	  }
@@ -890,7 +1813,7 @@
 	  return dst;
 	}
 
-	function int(str) {
+	function toInt(str) {
 	  return parseInt(str, 10);
 	}
 
@@ -1122,6 +2045,12 @@
 	}
 
 
+	var TYPED_ARRAY_REGEXP = /^\[object (Uint8(Clamped)?)|(Uint16)|(Uint32)|(Int8)|(Int16)|(Int32)|(Float(32)|(64))Array\]$/;
+	function isTypedArray(value) {
+	  return TYPED_ARRAY_REGEXP.test(toString.call(value));
+	}
+
+
 	var trim = function(value) {
 	  return isString(value) ? value.trim() : value;
 	};
@@ -1159,8 +2088,9 @@
 	 */
 	function makeMap(str) {
 	  var obj = {}, items = str.split(","), i;
-	  for (i = 0; i < items.length; i++)
+	  for (i = 0; i < items.length; i++) {
 	    obj[items[i]] = true;
+	  }
 	  return obj;
 	}
 
@@ -1175,9 +2105,10 @@
 
 	function arrayRemove(array, value) {
 	  var index = array.indexOf(value);
-	  if (index >= 0)
+	  if (index >= 0) {
 	    array.splice(index, 1);
-	  return value;
+	  }
+	  return index;
 	}
 
 	/**
@@ -1243,12 +2174,18 @@
 	    throw ngMinErr('cpws',
 	      "Can't copy! Making copies of Window or Scope instances is not supported.");
 	  }
+	  if (isTypedArray(destination)) {
+	    throw ngMinErr('cpta',
+	      "Can't copy! TypedArray destination cannot be mutated.");
+	  }
 
 	  if (!destination) {
 	    destination = source;
 	    if (source) {
 	      if (isArray(source)) {
 	        destination = copy(source, [], stackSource, stackDest);
+	      } else if (isTypedArray(source)) {
+	        destination = new source.constructor(source);
 	      } else if (isDate(source)) {
 	        destination = new Date(source.getTime());
 	      } else if (isRegExp(source)) {
@@ -1426,7 +2363,61 @@
 	  return (csp.isActive_ = active);
 	};
 
+	/**
+	 * @ngdoc directive
+	 * @module ng
+	 * @name ngJq
+	 *
+	 * @element ANY
+	 * @param {string=} the name of the library available under `window`
+	 * to be used for angular.element
+	 * @description
+	 * Use this directive to force the angular.element library.  This should be
+	 * used to force either jqLite by leaving ng-jq blank or setting the name of
+	 * the jquery variable under window (eg. jQuery).
+	 *
+	 * Since this directive is global for the angular library, it is recommended
+	 * that it's added to the same element as ng-app or the HTML element, but it is not mandatory.
+	 * It needs to be noted that only the first instance of `ng-jq` will be used and all others
+	 * ignored.
+	 *
+	 * @example
+	 * This example shows how to force jqLite using the `ngJq` directive to the `html` tag.
+	 ```html
+	 <!doctype html>
+	 <html ng-app ng-jq>
+	 ...
+	 ...
+	 </html>
+	 ```
+	 * @example
+	 * This example shows how to use a jQuery based library of a different name.
+	 * The library name must be available at the top most 'window'.
+	 ```html
+	 <!doctype html>
+	 <html ng-app ng-jq="jQueryLib">
+	 ...
+	 ...
+	 </html>
+	 ```
+	 */
+	var jq = function() {
+	  if (isDefined(jq.name_)) return jq.name_;
+	  var el;
+	  var i, ii = ngAttrPrefixes.length;
+	  for (i = 0; i < ii; ++i) {
+	    if (el = document.querySelector('[' + ngAttrPrefixes[i].replace(':', '\\:') + 'jq]')) {
+	      break;
+	    }
+	  }
 
+	  var name;
+	  if (el) {
+	    name = getNgAttribute(el, "jq");
+	  }
+
+	  return (jq.name_ = name);
+	};
 
 	function concat(array1, array2, index) {
 	  return array1.concat(slice.call(array2, index));
@@ -1999,7 +2990,12 @@
 	  }
 
 	  // bind to jQuery if present;
-	  jQuery = window.jQuery;
+	  var jqName = jq();
+	  jQuery = window.jQuery; // use default jQuery.
+	  if (isDefined(jqName)) { // `ngJq` present
+	    jQuery = jqName === null ? undefined : window[jqName]; // if empty; use jqLite. if not empty, use jQuery specified by `ngJq`.
+	  }
+
 	  // Use jQuery if it exists with proper functionality, otherwise default to us.
 	  // Angular 1.2+ requires jQuery 1.7+ for on()/off() support.
 	  // Angular 1.3+ technically requires at least jQuery 2.1+ but it may work with older
@@ -2591,11 +3587,11 @@
 	 * - `codeName` – `{string}` – Code name of the release, such as "jiggling-armfat".
 	 */
 	var version = {
-	  full: '1.3.14',    // all of these placeholder strings will be replaced by grunt's
+	  full: '1.4.0-beta.5',    // all of these placeholder strings will be replaced by grunt's
 	  major: 1,    // package task
-	  minor: 3,
-	  dot: 14,
-	  codeName: 'instantaneous-browserification'
+	  minor: 4,
+	  dot: 0,
+	  codeName: 'karmic-stabilization'
 	};
 
 
@@ -3583,8 +4579,9 @@
 	  children: function(element) {
 	    var children = [];
 	    forEach(element.childNodes, function(element) {
-	      if (element.nodeType === NODE_TYPE_ELEMENT)
+	      if (element.nodeType === NODE_TYPE_ELEMENT) {
 	        children.push(element);
+	      }
 	    });
 	    return children;
 	  },
@@ -5947,13 +6944,13 @@
 	         * @returns {*} the value stored.
 	         */
 	        put: function(key, value) {
+	          if (isUndefined(value)) return;
 	          if (capacity < Number.MAX_VALUE) {
 	            var lruEntry = lruHash[key] || (lruHash[key] = {key: key});
 
 	            refresh(lruEntry);
 	          }
 
-	          if (isUndefined(value)) return;
 	          if (!(key in data)) size++;
 	          data[key] = value;
 
@@ -6252,7 +7249,7 @@
 	 *       templateNamespace: 'html',
 	 *       scope: false,
 	 *       controller: function($scope, $element, $attrs, $transclude, otherInjectables) { ... },
-	 *       controllerAs: 'stringAlias',
+	 *       controllerAs: 'stringIdentifier',
 	 *       require: 'siblingDirectiveName', // or // ['^parentDirectiveName', '?optionalDirectiveName', '?^optionalParent'],
 	 *       compile: function compile(tElement, tAttrs, transclude) {
 	 *         return {
@@ -6412,9 +7409,10 @@
 	 *
 	 *
 	 * #### `controllerAs`
-	 * Controller alias at the directive scope. An alias for the controller so it
-	 * can be referenced at the directive template. The directive needs to define a scope for this
-	 * configuration to be used. Useful in the case when directive is used as component.
+	 * Identifier name for a reference to the controller in the directive's scope.
+	 * This allows the controller to be referenced from the directive template. The directive
+	 * needs to define a scope for this configuration to be used. Useful in the case when
+	 * directive is used as component.
 	 *
 	 *
 	 * #### `restrict`
@@ -6665,7 +7663,7 @@
 	 *
 	 * <div class="alert alert-info">
 	 * **Best Practice**: if you intend to add and remove transcluded content manually in your directive
-	 * (by calling the transclude function to get the DOM and and calling `element.remove()` to remove it),
+	 * (by calling the transclude function to get the DOM and calling `element.remove()` to remove it),
 	 * then you are also responsible for calling `$destroy` on the transclusion scope.
 	 * </div>
 	 *
@@ -6900,7 +7898,7 @@
 	  // 'on' and be composed of only English letters.
 	  var EVENT_HANDLER_ATTR_REGEXP = /^(on[a-z]+|formaction)$/;
 
-	  function parseIsolateBindings(scope, directiveName) {
+	  function parseIsolateBindings(scope, directiveName, isController) {
 	    var LOCAL_REGEXP = /^\s*([@&]|=(\*?))(\??)\s*(\w*)\s*$/;
 
 	    var bindings = {};
@@ -6910,9 +7908,11 @@
 
 	      if (!match) {
 	        throw $compileMinErr('iscp',
-	            "Invalid isolate scope definition for directive '{0}'." +
+	            "Invalid {3} for directive '{0}'." +
 	            " Definition: {... {1}: '{2}' ...}",
-	            directiveName, scopeName, definition);
+	            directiveName, scopeName, definition,
+	            (isController ? "controller bindings definition" :
+	            "isolate scope definition"));
 	      }
 
 	      bindings[scopeName] = {
@@ -6923,6 +7923,43 @@
 	      };
 	    });
 
+	    return bindings;
+	  }
+
+	  function parseDirectiveBindings(directive, directiveName) {
+	    var bindings = {
+	      isolateScope: null,
+	      bindToController: null
+	    };
+	    if (isObject(directive.scope)) {
+	      if (directive.bindToController === true) {
+	        bindings.bindToController = parseIsolateBindings(directive.scope,
+	                                                         directiveName, true);
+	        bindings.isolateScope = {};
+	      } else {
+	        bindings.isolateScope = parseIsolateBindings(directive.scope,
+	                                                     directiveName, false);
+	      }
+	    }
+	    if (isObject(directive.bindToController)) {
+	      bindings.bindToController =
+	          parseIsolateBindings(directive.bindToController, directiveName, true);
+	    }
+	    if (isObject(bindings.bindToController)) {
+	      var controller = directive.controller;
+	      var controllerAs = directive.controllerAs;
+	      if (!controller) {
+	        // There is no controller, there may or may not be a controllerAs property
+	        throw $compileMinErr('noctrl',
+	              "Cannot bind to controller without directive '{0}'s controller.",
+	              directiveName);
+	      } else if (!identifierForController(controller, controllerAs)) {
+	        // There is a controller, but no identifier or controllerAs property
+	        throw $compileMinErr('noident',
+	              "Cannot bind to controller without identifier for directive '{0}'.",
+	              directiveName);
+	      }
+	    }
 	    return bindings;
 	  }
 
@@ -6963,8 +8000,10 @@
 	                directive.name = directive.name || name;
 	                directive.require = directive.require || (directive.controller && directive.name);
 	                directive.restrict = directive.restrict || 'EA';
-	                if (isObject(directive.scope)) {
-	                  directive.$$isolateBindings = parseIsolateBindings(directive.scope, directive.name);
+	                var bindings = directive.$$bindings =
+	                    parseDirectiveBindings(directive, directive.name);
+	                if (isObject(bindings.isolateScope)) {
+	                  directive.$$isolateBindings = bindings.isolateScope;
 	                }
 	                directives.push(directive);
 	              } catch (e) {
@@ -7526,6 +8565,11 @@
 	            if (nodeLinkFn.scope) {
 	              childScope = scope.$new();
 	              compile.$$addScopeInfo(jqLite(node), childScope);
+	              var destroyBindings = nodeLinkFn.$$destroyBindings;
+	              if (destroyBindings) {
+	                nodeLinkFn.$$destroyBindings = null;
+	                childScope.$on('$destroyed', destroyBindings);
+	              }
 	            } else {
 	              childScope = scope;
 	            }
@@ -7545,7 +8589,8 @@
 	              childBoundTranscludeFn = null;
 	            }
 
-	            nodeLinkFn(childLinkFn, childScope, node, $rootElement, childBoundTranscludeFn);
+	            nodeLinkFn(childLinkFn, childScope, node, $rootElement, childBoundTranscludeFn,
+	                       nodeLinkFn);
 
 	          } else if (childLinkFn) {
 	            childLinkFn(scope, node.childNodes, undefined, parentBoundTranscludeFn);
@@ -7754,7 +8799,6 @@
 	      var terminalPriority = -Number.MAX_VALUE,
 	          newScopeDirective,
 	          controllerDirectives = previousCompileContext.controllerDirectives,
-	          controllers,
 	          newIsolateScopeDirective = previousCompileContext.newIsolateScopeDirective,
 	          templateDirective = previousCompileContext.templateDirective,
 	          nonTlbTranscludeDirective = previousCompileContext.nonTlbTranscludeDirective,
@@ -7812,7 +8856,7 @@
 
 	        if (!directive.templateUrl && directive.controller) {
 	          directiveValue = directive.controller;
-	          controllerDirectives = controllerDirectives || {};
+	          controllerDirectives = controllerDirectives || createMap();
 	          assertNoDuplicate("'" + directiveName + "' controller",
 	              controllerDirectives[directiveName], directive, $compileNode);
 	          controllerDirectives[directiveName] = directive;
@@ -7980,53 +9024,77 @@
 
 
 	      function getControllers(directiveName, require, $element, elementControllers) {
-	        var value, retrievalMethod = 'data', optional = false;
-	        var $searchElement = $element;
-	        var match;
+	        var value;
+
 	        if (isString(require)) {
-	          match = require.match(REQUIRE_PREFIX_REGEXP);
-	          require = require.substring(match[0].length);
+	          var match = require.match(REQUIRE_PREFIX_REGEXP);
+	          var name = require.substring(match[0].length);
+	          var inheritType = match[1] || match[3];
+	          var optional = match[2] === '?';
 
-	          if (match[3]) {
-	            if (match[1]) match[3] = null;
-	            else match[1] = match[3];
-	          }
-	          if (match[1] === '^') {
-	            retrievalMethod = 'inheritedData';
-	          } else if (match[1] === '^^') {
-	            retrievalMethod = 'inheritedData';
-	            $searchElement = $element.parent();
-	          }
-	          if (match[2] === '?') {
-	            optional = true;
+	          //If only parents then start at the parent element
+	          if (inheritType === '^^') {
+	            $element = $element.parent();
+	          //Otherwise attempt getting the controller from elementControllers in case
+	          //the element is transcluded (and has no data) and to avoid .data if possible
+	          } else {
+	            value = elementControllers && elementControllers[name];
+	            value = value && value.instance;
 	          }
 
-	          value = null;
-
-	          if (elementControllers && retrievalMethod === 'data') {
-	            if (value = elementControllers[require]) {
-	              value = value.instance;
-	            }
+	          if (!value) {
+	            var dataName = '$' + name + 'Controller';
+	            value = inheritType ? $element.inheritedData(dataName) : $element.data(dataName);
 	          }
-	          value = value || $searchElement[retrievalMethod]('$' + require + 'Controller');
 
 	          if (!value && !optional) {
 	            throw $compileMinErr('ctreq',
 	                "Controller '{0}', required by directive '{1}', can't be found!",
-	                require, directiveName);
+	                name, directiveName);
 	          }
-	          return value || null;
 	        } else if (isArray(require)) {
 	          value = [];
-	          forEach(require, function(require) {
-	            value.push(getControllers(directiveName, require, $element, elementControllers));
-	          });
+	          for (var i = 0, ii = require.length; i < ii; i++) {
+	            value[i] = getControllers(directiveName, require[i], $element, elementControllers);
+	          }
 	        }
-	        return value;
+
+	        return value || null;
 	      }
 
+	      function setupControllers($element, attrs, transcludeFn, controllerDirectives, isolateScope, scope) {
+	        var elementControllers = createMap();
+	        for (var controllerKey in controllerDirectives) {
+	          var directive = controllerDirectives[controllerKey];
+	          var locals = {
+	            $scope: directive === newIsolateScopeDirective || directive.$$isolateScope ? isolateScope : scope,
+	            $element: $element,
+	            $attrs: attrs,
+	            $transclude: transcludeFn
+	          };
 
-	      function nodeLinkFn(childLinkFn, scope, linkNode, $rootElement, boundTranscludeFn) {
+	          var controller = directive.controller;
+	          if (controller == '@') {
+	            controller = attrs[directive.name];
+	          }
+
+	          var controllerInstance = $controller(controller, locals, true, directive.controllerAs);
+
+	          // For directives with element transclusion the element is a comment,
+	          // but jQuery .data doesn't support attaching data to comment nodes as it's hard to
+	          // clean up (http://bugs.jquery.com/ticket/8335).
+	          // Instead, we save the controllers for the element in a local hash and attach to .data
+	          // later, once we have the actual element.
+	          elementControllers[directive.name] = controllerInstance;
+	          if (!hasElementTranscludeDirective) {
+	            $element.data('$' + directive.name + 'Controller', controllerInstance.instance);
+	          }
+	        }
+	        return elementControllers;
+	      }
+
+	      function nodeLinkFn(childLinkFn, scope, linkNode, $rootElement, boundTranscludeFn,
+	                          thisLinkFn) {
 	        var i, ii, linkFn, controller, isolateScope, elementControllers, transcludeFn, $element,
 	            attrs;
 
@@ -8050,126 +9118,48 @@
 	        }
 
 	        if (controllerDirectives) {
-	          // TODO: merge `controllers` and `elementControllers` into single object.
-	          controllers = {};
-	          elementControllers = {};
-	          forEach(controllerDirectives, function(directive) {
-	            var locals = {
-	              $scope: directive === newIsolateScopeDirective || directive.$$isolateScope ? isolateScope : scope,
-	              $element: $element,
-	              $attrs: attrs,
-	              $transclude: transcludeFn
-	            }, controllerInstance;
-
-	            controller = directive.controller;
-	            if (controller == '@') {
-	              controller = attrs[directive.name];
-	            }
-
-	            controllerInstance = $controller(controller, locals, true, directive.controllerAs);
-
-	            // For directives with element transclusion the element is a comment,
-	            // but jQuery .data doesn't support attaching data to comment nodes as it's hard to
-	            // clean up (http://bugs.jquery.com/ticket/8335).
-	            // Instead, we save the controllers for the element in a local hash and attach to .data
-	            // later, once we have the actual element.
-	            elementControllers[directive.name] = controllerInstance;
-	            if (!hasElementTranscludeDirective) {
-	              $element.data('$' + directive.name + 'Controller', controllerInstance.instance);
-	            }
-
-	            controllers[directive.name] = controllerInstance;
-	          });
+	          elementControllers = setupControllers($element, attrs, transcludeFn, controllerDirectives, isolateScope, scope);
 	        }
 
 	        if (newIsolateScopeDirective) {
+	          // Initialize isolate scope bindings for new isolate scope directive.
 	          compile.$$addScopeInfo($element, isolateScope, true, !(templateDirective && (templateDirective === newIsolateScopeDirective ||
 	              templateDirective === newIsolateScopeDirective.$$originalDirective)));
 	          compile.$$addScopeClass($element, true);
-
-	          var isolateScopeController = controllers && controllers[newIsolateScopeDirective.name];
-	          var isolateBindingContext = isolateScope;
-	          if (isolateScopeController && isolateScopeController.identifier &&
-	              newIsolateScopeDirective.bindToController === true) {
-	            isolateBindingContext = isolateScopeController.instance;
-	          }
-
-	          forEach(isolateScope.$$isolateBindings = newIsolateScopeDirective.$$isolateBindings, function(definition, scopeName) {
-	            var attrName = definition.attrName,
-	                optional = definition.optional,
-	                mode = definition.mode, // @, =, or &
-	                lastValue,
-	                parentGet, parentSet, compare;
-
-	            switch (mode) {
-
-	              case '@':
-	                attrs.$observe(attrName, function(value) {
-	                  isolateBindingContext[scopeName] = value;
-	                });
-	                attrs.$$observers[attrName].$$scope = scope;
-	                if (attrs[attrName]) {
-	                  // If the attribute has been provided then we trigger an interpolation to ensure
-	                  // the value is there for use in the link fn
-	                  isolateBindingContext[scopeName] = $interpolate(attrs[attrName])(scope);
-	                }
-	                break;
-
-	              case '=':
-	                if (optional && !attrs[attrName]) {
-	                  return;
-	                }
-	                parentGet = $parse(attrs[attrName]);
-	                if (parentGet.literal) {
-	                  compare = equals;
-	                } else {
-	                  compare = function(a, b) { return a === b || (a !== a && b !== b); };
-	                }
-	                parentSet = parentGet.assign || function() {
-	                  // reset the change, or we will throw this exception on every $digest
-	                  lastValue = isolateBindingContext[scopeName] = parentGet(scope);
-	                  throw $compileMinErr('nonassign',
-	                      "Expression '{0}' used with directive '{1}' is non-assignable!",
-	                      attrs[attrName], newIsolateScopeDirective.name);
-	                };
-	                lastValue = isolateBindingContext[scopeName] = parentGet(scope);
-	                var parentValueWatch = function parentValueWatch(parentValue) {
-	                  if (!compare(parentValue, isolateBindingContext[scopeName])) {
-	                    // we are out of sync and need to copy
-	                    if (!compare(parentValue, lastValue)) {
-	                      // parent changed and it has precedence
-	                      isolateBindingContext[scopeName] = parentValue;
-	                    } else {
-	                      // if the parent can be assigned then do so
-	                      parentSet(scope, parentValue = isolateBindingContext[scopeName]);
-	                    }
-	                  }
-	                  return lastValue = parentValue;
-	                };
-	                parentValueWatch.$stateful = true;
-	                var unwatch;
-	                if (definition.collection) {
-	                  unwatch = scope.$watchCollection(attrs[attrName], parentValueWatch);
-	                } else {
-	                  unwatch = scope.$watch($parse(attrs[attrName], parentValueWatch), null, parentGet.literal);
-	                }
-	                isolateScope.$on('$destroy', unwatch);
-	                break;
-
-	              case '&':
-	                parentGet = $parse(attrs[attrName]);
-	                isolateBindingContext[scopeName] = function(locals) {
-	                  return parentGet(scope, locals);
-	                };
-	                break;
-	            }
-	          });
+	          isolateScope.$$isolateBindings =
+	              newIsolateScopeDirective.$$isolateBindings;
+	          initializeDirectiveBindings(scope, attrs, isolateScope,
+	                                      isolateScope.$$isolateBindings,
+	                                      newIsolateScopeDirective, isolateScope);
 	        }
-	        if (controllers) {
-	          forEach(controllers, function(controller) {
-	            controller();
-	          });
-	          controllers = null;
+	        if (elementControllers) {
+	          // Initialize bindToController bindings for new/isolate scopes
+	          var scopeDirective = newIsolateScopeDirective || newScopeDirective;
+	          var bindings;
+	          var controllerForBindings;
+	          if (scopeDirective && elementControllers[scopeDirective.name]) {
+	            bindings = scopeDirective.$$bindings.bindToController;
+	            controller = elementControllers[scopeDirective.name];
+
+	            if (controller && controller.identifier && bindings) {
+	              controllerForBindings = controller;
+	              thisLinkFn.$$destroyBindings =
+	                  initializeDirectiveBindings(scope, attrs, controller.instance,
+	                                              bindings, scopeDirective);
+	            }
+	          }
+	          for (i in elementControllers) {
+	            controller = elementControllers[i];
+	            var controllerResult = controller();
+	            if (controllerResult !== controller.instance &&
+	                controller === controllerForBindings) {
+	              // Remove and re-install bindToController bindings
+	              thisLinkFn.$$destroyBindings();
+	              thisLinkFn.$$destroyBindings =
+	                  initializeDirectiveBindings(scope, attrs, controllerResult,
+	                                              bindings, scopeDirective);
+	            }
+	          }
 	        }
 
 	        // PRELINKING
@@ -8427,7 +9417,7 @@
 	              childBoundTranscludeFn = boundTranscludeFn;
 	            }
 	            afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, linkNode, $rootElement,
-	              childBoundTranscludeFn);
+	              childBoundTranscludeFn, afterTemplateNodeLinkFn);
 	          }
 	          linkQueue = null;
 	        });
@@ -8444,7 +9434,8 @@
 	          if (afterTemplateNodeLinkFn.transcludeOnThisElement) {
 	            childBoundTranscludeFn = createBoundTranscludeFn(scope, afterTemplateNodeLinkFn.transclude, boundTranscludeFn);
 	          }
-	          afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, node, rootElement, childBoundTranscludeFn);
+	          afterTemplateNodeLinkFn(afterTemplateChildLinkFn, scope, node, rootElement, childBoundTranscludeFn,
+	                                  afterTemplateNodeLinkFn);
 	        }
 	      };
 	    }
@@ -8691,6 +9682,102 @@
 	        $exceptionHandler(e, startingTag($element));
 	      }
 	    }
+
+
+	    // Set up $watches for isolate scope and controller bindings. This process
+	    // only occurs for isolate scopes and new scopes with controllerAs.
+	    function initializeDirectiveBindings(scope, attrs, destination, bindings,
+	                                         directive, newScope) {
+	      var onNewScopeDestroyed;
+	      forEach(bindings, function(definition, scopeName) {
+	        var attrName = definition.attrName,
+	        optional = definition.optional,
+	        mode = definition.mode, // @, =, or &
+	        lastValue,
+	        parentGet, parentSet, compare;
+
+	        switch (mode) {
+
+	          case '@':
+	            attrs.$observe(attrName, function(value) {
+	              destination[scopeName] = value;
+	            });
+	            attrs.$$observers[attrName].$$scope = scope;
+	            if (attrs[attrName]) {
+	              // If the attribute has been provided then we trigger an interpolation to ensure
+	              // the value is there for use in the link fn
+	              destination[scopeName] = $interpolate(attrs[attrName])(scope);
+	            }
+	            break;
+
+	          case '=':
+	            if (optional && !attrs[attrName]) {
+	              return;
+	            }
+	            parentGet = $parse(attrs[attrName]);
+	            if (parentGet.literal) {
+	              compare = equals;
+	            } else {
+	              compare = function(a, b) { return a === b || (a !== a && b !== b); };
+	            }
+	            parentSet = parentGet.assign || function() {
+	              // reset the change, or we will throw this exception on every $digest
+	              lastValue = destination[scopeName] = parentGet(scope);
+	              throw $compileMinErr('nonassign',
+	                  "Expression '{0}' used with directive '{1}' is non-assignable!",
+	                  attrs[attrName], directive.name);
+	            };
+	            lastValue = destination[scopeName] = parentGet(scope);
+	            var parentValueWatch = function parentValueWatch(parentValue) {
+	              if (!compare(parentValue, destination[scopeName])) {
+	                // we are out of sync and need to copy
+	                if (!compare(parentValue, lastValue)) {
+	                  // parent changed and it has precedence
+	                  destination[scopeName] = parentValue;
+	                } else {
+	                  // if the parent can be assigned then do so
+	                  parentSet(scope, parentValue = destination[scopeName]);
+	                }
+	              }
+	              return lastValue = parentValue;
+	            };
+	            parentValueWatch.$stateful = true;
+	            var unwatch;
+	            if (definition.collection) {
+	              unwatch = scope.$watchCollection(attrs[attrName], parentValueWatch);
+	            } else {
+	              unwatch = scope.$watch($parse(attrs[attrName], parentValueWatch), null, parentGet.literal);
+	            }
+	            onNewScopeDestroyed = (onNewScopeDestroyed || []);
+	            onNewScopeDestroyed.push(unwatch);
+	            break;
+
+	          case '&':
+	            // Don't assign Object.prototype method to scope
+	            if (!attrs.hasOwnProperty(attrName) && optional) break;
+
+	            parentGet = $parse(attrs[attrName]);
+
+	            // Don't assign noop to destination if expression is not valid
+	            if (parentGet === noop && optional) break;
+
+	            destination[scopeName] = function(locals) {
+	              return parentGet(scope, locals);
+	            };
+	            break;
+	        }
+	      });
+	      var destroyBindings = onNewScopeDestroyed ? function destroyBindings() {
+	        for (var i = 0, ii = onNewScopeDestroyed.length; i < ii; ++i) {
+	          onNewScopeDestroyed[i]();
+	        }
+	      } : noop;
+	      if (newScope && destroyBindings !== noop) {
+	        newScope.$on('$destroy', destroyBindings);
+	        return noop;
+	      }
+	      return destroyBindings;
+	    }
 	  }];
 	}
 
@@ -8798,6 +9885,17 @@
 
 	var $controllerMinErr = minErr('$controller');
 
+
+	var CNTRL_REG = /^(\S+)(\s+as\s+(\w+))?$/;
+	function identifierForController(controller, ident) {
+	  if (ident && isString(ident)) return ident;
+	  if (isString(controller)) {
+	    var match = CNTRL_REG.exec(controller);
+	    if (match) return match[3];
+	  }
+	}
+
+
 	/**
 	 * @ngdoc provider
 	 * @name $controllerProvider
@@ -8810,9 +9908,7 @@
 	 */
 	function $ControllerProvider() {
 	  var controllers = {},
-	      globals = false,
-	      CNTRL_REG = /^(\S+)(\s+as\s+(\w+))?$/;
-
+	      globals = false;
 
 	  /**
 	   * @ngdoc method
@@ -8920,8 +10016,16 @@
 	          addIdentifier(locals, identifier, instance, constructor || expression.name);
 	        }
 
-	        return extend(function() {
-	          $injector.invoke(expression, instance, locals, constructor);
+	        var instantiate;
+	        return instantiate = extend(function() {
+	          var result = $injector.invoke(expression, instance, locals, constructor);
+	          if (result !== instance && (isObject(result) || isFunction(result))) {
+	            instance = result;
+	            if (identifier) {
+	              // If result changed, re-assign controllerAs value to scope.
+	              addIdentifier(locals, identifier, instance, constructor || expression.name);
+	            }
+	          }
 	          return instance;
 	        }, {
 	          instance: instance,
@@ -9066,19 +10170,24 @@
 	 * @returns {Object} Parsed headers as key value object
 	 */
 	function parseHeaders(headers) {
-	  var parsed = createMap(), key, val, i;
+	  var parsed = createMap(), i;
 
-	  if (!headers) return parsed;
-
-	  forEach(headers.split('\n'), function(line) {
-	    i = line.indexOf(':');
-	    key = lowercase(trim(line.substr(0, i)));
-	    val = trim(line.substr(i + 1));
-
+	  function fillInParsed(key, val) {
 	    if (key) {
 	      parsed[key] = parsed[key] ? parsed[key] + ', ' + val : val;
 	    }
-	  });
+	  }
+
+	  if (isString(headers)) {
+	    forEach(headers.split('\n'), function(line) {
+	      i = line.indexOf(':');
+	      fillInParsed(lowercase(trim(line.substr(0, i))), trim(line.substr(i + 1)));
+	    });
+	  } else if (isObject(headers)) {
+	    forEach(headers, function(headerVal, headerKey) {
+	      fillInParsed(lowercase(headerKey), trim(headerVal));
+	    });
+	  }
 
 	  return parsed;
 	}
@@ -9097,7 +10206,7 @@
 	 *   - if called with no arguments returns an object containing all headers.
 	 */
 	function headersGetter(headers) {
-	  var headersObj = isObject(headers) ? headers : undefined;
+	  var headersObj;
 
 	  return function(name) {
 	    if (!headersObj) headersObj =  parseHeaders(headers);
@@ -9127,8 +10236,9 @@
 	 * @returns {*} Transformed data.
 	 */
 	function transformData(data, headers, status, fns) {
-	  if (isFunction(fns))
+	  if (isFunction(fns)) {
 	    return fns(data, headers, status);
+	  }
 
 	  forEach(fns, function(fn) {
 	    data = fn(data, headers, status);
@@ -9376,7 +10486,7 @@
 	     * To add or overwrite these defaults, simply add or remove a property from these configuration
 	     * objects. To add headers for an HTTP method other than POST or PUT, simply add a new object
 	     * with the lowercased HTTP method name as the key, e.g.
-	     * `$httpProvider.defaults.headers.get = { 'My-Header' : 'value' }.
+	     * `$httpProvider.defaults.headers.get = { 'My-Header' : 'value' }`.
 	     *
 	     * The defaults can also be set at runtime via the `$http.defaults` object in the same
 	     * fashion. For example:
@@ -9644,7 +10754,7 @@
 	     *    - **data** – `{string|Object}` – Data to be sent as the request message data.
 	     *    - **headers** – `{Object}` – Map of strings or functions which return strings representing
 	     *      HTTP headers to send to the server. If the return value of a function is null, the
-	     *      header will not be sent.
+	     *      header will not be sent. Functions accept a config object as an argument.
 	     *    - **xsrfHeaderName** – `{string}` – Name of HTTP header to populate with the XSRF token.
 	     *    - **xsrfCookieName** – `{string}` – Name of cookie containing the XSRF token.
 	     *    - **transformRequest** –
@@ -9863,12 +10973,12 @@
 	          : $q.reject(resp);
 	      }
 
-	      function executeHeaderFns(headers) {
+	      function executeHeaderFns(headers, config) {
 	        var headerContent, processedHeaders = {};
 
 	        forEach(headers, function(headerFn, header) {
 	          if (isFunction(headerFn)) {
-	            headerContent = headerFn();
+	            headerContent = headerFn(config);
 	            if (headerContent != null) {
 	              processedHeaders[header] = headerContent;
 	            }
@@ -9902,7 +11012,7 @@
 	        }
 
 	        // execute if header value is a function for merged headers
-	        return executeHeaderFns(reqHeaders);
+	        return executeHeaderFns(reqHeaders, shallowCopy(config));
 	      }
 	    }
 
@@ -10446,6 +11556,28 @@
 	      return '\\\\\\' + ch;
 	    }
 
+	    function unescapeText(text) {
+	      return text.replace(escapedStartRegexp, startSymbol).
+	        replace(escapedEndRegexp, endSymbol);
+	    }
+
+	    function stringify(value) {
+	      if (value == null) { // null || undefined
+	        return '';
+	      }
+	      switch (typeof value) {
+	        case 'string':
+	          break;
+	        case 'number':
+	          value = '' + value;
+	          break;
+	        default:
+	          value = toJson(value);
+	      }
+
+	      return value;
+	    }
+
 	    /**
 	     * @ngdoc service
 	     * @name $interpolate
@@ -10601,23 +11733,6 @@
 	            $sce.valueOf(value);
 	        };
 
-	        var stringify = function(value) {
-	          if (value == null) { // null || undefined
-	            return '';
-	          }
-	          switch (typeof value) {
-	            case 'string':
-	              break;
-	            case 'number':
-	              value = '' + value;
-	              break;
-	            default:
-	              value = toJson(value);
-	          }
-
-	          return value;
-	        };
-
 	        return extend(function interpolationFn(context) {
 	            var i = 0;
 	            var ii = expressions.length;
@@ -10650,11 +11765,6 @@
 	            }, objectEquality);
 	          }
 	        });
-	      }
-
-	      function unescapeText(text) {
-	        return text.replace(escapedStartRegexp, startSymbol).
-	          replace(escapedEndRegexp, endSymbol);
 	      }
 
 	      function parseStringifyInterceptor(value) {
@@ -10989,7 +12099,7 @@
 
 	  locationObj.$$protocol = parsedUrl.protocol;
 	  locationObj.$$host = parsedUrl.hostname;
-	  locationObj.$$port = int(parsedUrl.port) || DEFAULT_PORTS[parsedUrl.protocol] || null;
+	  locationObj.$$port = toInt(parsedUrl.port) || DEFAULT_PORTS[parsedUrl.protocol] || null;
 	}
 
 
@@ -11335,8 +12445,9 @@
 	   * @return {string} url
 	   */
 	  url: function(url) {
-	    if (isUndefined(url))
+	    if (isUndefined(url)) {
 	      return this.$$url;
+	    }
 
 	    var match = PATH_MATCH.exec(url);
 	    if (match[1] || url === '') this.path(decodeURIComponent(match[1]));
@@ -11575,8 +12686,9 @@
 	   * @return {object} state
 	   */
 	  Location.prototype.state = function(state) {
-	    if (!arguments.length)
+	    if (!arguments.length) {
 	      return this.$$state;
+	    }
 
 	    if (Location !== LocationHtml5Url || !this.$$html5) {
 	      throw $locationMinErr('nostate', 'History API state support is available only ' +
@@ -11601,8 +12713,9 @@
 
 	function locationGetterSetter(property, preprocess) {
 	  return function(value) {
-	    if (isUndefined(value))
+	    if (isUndefined(value)) {
 	      return this[property];
+	    }
 
 	    this[property] = preprocess(value);
 	    this.$$compose();
@@ -12169,57 +13282,8 @@
 	  }
 	}
 
-	//Keyword constants
-	var CONSTANTS = createMap();
-	forEach({
-	  'null': function() { return null; },
-	  'true': function() { return true; },
-	  'false': function() { return false; },
-	  'undefined': function() {}
-	}, function(constantGetter, name) {
-	  constantGetter.constant = constantGetter.literal = constantGetter.sharedGetter = true;
-	  CONSTANTS[name] = constantGetter;
-	});
-
-	//Not quite a constant, but can be lex/parsed the same
-	CONSTANTS['this'] = function(self) { return self; };
-	CONSTANTS['this'].sharedGetter = true;
-
-
-	//Operators - will be wrapped by binaryFn/unaryFn/assignment/filter
-	var OPERATORS = extend(createMap(), {
-	    '+':function(self, locals, a, b) {
-	      a=a(self, locals); b=b(self, locals);
-	      if (isDefined(a)) {
-	        if (isDefined(b)) {
-	          return a + b;
-	        }
-	        return a;
-	      }
-	      return isDefined(b) ? b : undefined;},
-	    '-':function(self, locals, a, b) {
-	          a=a(self, locals); b=b(self, locals);
-	          return (isDefined(a) ? a : 0) - (isDefined(b) ? b : 0);
-	        },
-	    '*':function(self, locals, a, b) {return a(self, locals) * b(self, locals);},
-	    '/':function(self, locals, a, b) {return a(self, locals) / b(self, locals);},
-	    '%':function(self, locals, a, b) {return a(self, locals) % b(self, locals);},
-	    '===':function(self, locals, a, b) {return a(self, locals) === b(self, locals);},
-	    '!==':function(self, locals, a, b) {return a(self, locals) !== b(self, locals);},
-	    '==':function(self, locals, a, b) {return a(self, locals) == b(self, locals);},
-	    '!=':function(self, locals, a, b) {return a(self, locals) != b(self, locals);},
-	    '<':function(self, locals, a, b) {return a(self, locals) < b(self, locals);},
-	    '>':function(self, locals, a, b) {return a(self, locals) > b(self, locals);},
-	    '<=':function(self, locals, a, b) {return a(self, locals) <= b(self, locals);},
-	    '>=':function(self, locals, a, b) {return a(self, locals) >= b(self, locals);},
-	    '&&':function(self, locals, a, b) {return a(self, locals) && b(self, locals);},
-	    '||':function(self, locals, a, b) {return a(self, locals) || b(self, locals);},
-	    '!':function(self, locals, a) {return !a(self, locals);},
-
-	    //Tokenized as operators but parsed as assignment/filters
-	    '=':true,
-	    '|':true
-	});
+	var OPERATORS = createMap();
+	forEach('+ - * / % === !== == != < > <= >= && || ! = |'.split(' '), function(operator) { OPERATORS[operator] = true; });
 	var ESCAPE = {"n":"\n", "f":"\f", "r":"\r", "t":"\t", "v":"\v", "'":"'", '"':'"'};
 
 
@@ -12371,8 +13435,9 @@
 	      if (escape) {
 	        if (ch === 'u') {
 	          var hex = this.text.substring(this.index + 1, this.index + 5);
-	          if (!hex.match(/[\da-f]{4}/i))
+	          if (!hex.match(/[\da-f]{4}/i)) {
 	            this.throwError('Invalid unicode escape [\\u' + hex + ']');
+	          }
 	          this.index += 4;
 	          string += String.fromCharCode(parseInt(hex, 16));
 	        } else {
@@ -12400,44 +13465,153 @@
 	  }
 	};
 
-
-	function isConstant(exp) {
-	  return exp.constant;
-	}
-
-	/**
-	 * @constructor
-	 */
-	var Parser = function(lexer, $filter, options) {
+	var AST = function(lexer, options) {
 	  this.lexer = lexer;
-	  this.$filter = $filter;
 	  this.options = options;
 	};
 
-	Parser.ZERO = extend(function() {
-	  return 0;
-	}, {
-	  sharedGetter: true,
-	  constant: true
-	});
+	AST.Program = 'Program';
+	AST.ExpressionStatement = 'ExpressionStatement';
+	AST.AssignmentExpression = 'AssignmentExpression';
+	AST.ConditionalExpression = 'ConditionalExpression';
+	AST.LogicalExpression = 'LogicalExpression';
+	AST.BinaryExpression = 'BinaryExpression';
+	AST.UnaryExpression = 'UnaryExpression';
+	AST.CallExpression = 'CallExpression';
+	AST.MemberExpression = 'MemberExpression';
+	AST.Identifier = 'Identifier';
+	AST.Literal = 'Literal';
+	AST.ArrayExpression = 'ArrayExpression';
+	AST.Property = 'Property';
+	AST.ObjectExpression = 'ObjectExpression';
+	AST.ThisExpression = 'ThisExpression';
 
-	Parser.prototype = {
-	  constructor: Parser,
+	// Internal use only
+	AST.NGValueParameter = 'NGValueParameter';
 
-	  parse: function(text) {
+	AST.prototype = {
+	  ast: function(text) {
 	    this.text = text;
 	    this.tokens = this.lexer.lex(text);
 
-	    var value = this.statements();
+	    var value = this.program();
 
 	    if (this.tokens.length !== 0) {
 	      this.throwError('is an unexpected token', this.tokens[0]);
 	    }
 
-	    value.literal = !!value.literal;
-	    value.constant = !!value.constant;
-
 	    return value;
+	  },
+
+	  program: function() {
+	    var body = [];
+	    while (true) {
+	      if (this.tokens.length > 0 && !this.peek('}', ')', ';', ']'))
+	        body.push(this.expressionStatement());
+	      if (!this.expect(';')) {
+	        return { type: AST.Program, body: body};
+	      }
+	    }
+	  },
+
+	  expressionStatement: function() {
+	    return { type: AST.ExpressionStatement, expression: this.filterChain() };
+	  },
+
+	  filterChain: function() {
+	    var left = this.expression();
+	    var token;
+	    while ((token = this.expect('|'))) {
+	      left = this.filter(left);
+	    }
+	    return left;
+	  },
+
+	  expression: function() {
+	    return this.assignment();
+	  },
+
+	  assignment: function() {
+	    var result = this.ternary();
+	    if (this.expect('=')) {
+	      result = { type: AST.AssignmentExpression, left: result, right: this.assignment(), operator: '='};
+	    }
+	    return result;
+	  },
+
+	  ternary: function() {
+	    var test = this.logicalOR();
+	    var alternate;
+	    var consequent;
+	    if (this.expect('?')) {
+	      alternate = this.expression();
+	      if (this.consume(':')) {
+	        consequent = this.expression();
+	        return { type: AST.ConditionalExpression, test: test, alternate: alternate, consequent: consequent};
+	      }
+	    }
+	    return test;
+	  },
+
+	  logicalOR: function() {
+	    var left = this.logicalAND();
+	    while (this.expect('||')) {
+	      left = { type: AST.LogicalExpression, operator: '||', left: left, right: this.logicalAND() };
+	    }
+	    return left;
+	  },
+
+	  logicalAND: function() {
+	    var left = this.equality();
+	    while (this.expect('&&')) {
+	      left = { type: AST.LogicalExpression, operator: '&&', left: left, right: this.equality()};
+	    }
+	    return left;
+	  },
+
+	  equality: function() {
+	    var left = this.relational();
+	    var token;
+	    while ((token = this.expect('==','!=','===','!=='))) {
+	      left = { type: AST.BinaryExpression, operator: token.text, left: left, right: this.relational() };
+	    }
+	    return left;
+	  },
+
+	  relational: function() {
+	    var left = this.additive();
+	    var token;
+	    while ((token = this.expect('<', '>', '<=', '>='))) {
+	      left = { type: AST.BinaryExpression, operator: token.text, left: left, right: this.additive() };
+	    }
+	    return left;
+	  },
+
+	  additive: function() {
+	    var left = this.multiplicative();
+	    var token;
+	    while ((token = this.expect('+','-'))) {
+	      left = { type: AST.BinaryExpression, operator: token.text, left: left, right: this.multiplicative() };
+	    }
+	    return left;
+	  },
+
+	  multiplicative: function() {
+	    var left = this.unary();
+	    var token;
+	    while ((token = this.expect('*','/','%'))) {
+	      left = { type: AST.BinaryExpression, operator: token.text, left: left, right: this.unary() };
+	    }
+	    return left;
+	  },
+
+	  unary: function() {
+	    var token;
+	    if ((token = this.expect('+', '-', '!'))) {
+	      return { type: AST.UnaryExpression, operator: token.text, prefix: true, argument: this.unary() };
+	    } else {
+	      return this.primary();
+	    }
 	  },
 
 	  primary: function() {
@@ -12449,8 +13623,8 @@
 	      primary = this.arrayDeclaration();
 	    } else if (this.expect('{')) {
 	      primary = this.object();
-	    } else if (this.peek().identifier && this.peek().text in CONSTANTS) {
-	      primary = CONSTANTS[this.consume().text];
+	    } else if (this.constants.hasOwnProperty(this.peek().text)) {
+	      primary = copy(this.constants[this.consume().text]);
 	    } else if (this.peek().identifier) {
 	      primary = this.identifier();
 	    } else if (this.peek().constant) {
@@ -12459,22 +13633,97 @@
 	      this.throwError('not a primary expression', this.peek());
 	    }
 
-	    var next, context;
+	    var next;
 	    while ((next = this.expect('(', '[', '.'))) {
 	      if (next.text === '(') {
-	        primary = this.functionCall(primary, context);
-	        context = null;
+	        primary = {type: AST.CallExpression, callee: primary, arguments: this.parseArguments() };
+	        this.consume(')');
 	      } else if (next.text === '[') {
-	        context = primary;
-	        primary = this.objectIndex(primary);
+	        primary = { type: AST.MemberExpression, object: primary, property: this.expression(), computed: true };
+	        this.consume(']');
 	      } else if (next.text === '.') {
-	        context = primary;
-	        primary = this.fieldAccess(primary);
+	        primary = { type: AST.MemberExpression, object: primary, property: this.identifier(), computed: false };
 	      } else {
 	        this.throwError('IMPOSSIBLE');
 	      }
 	    }
 	    return primary;
+	  },
+
+	  filter: function(baseExpression) {
+	    var args = [baseExpression];
+	    var result = {type: AST.CallExpression, callee: this.identifier(), arguments: args, filter: true};
+
+	    while (this.expect(':')) {
+	      args.push(this.expression());
+	    }
+
+	    return result;
+	  },
+
+	  parseArguments: function() {
+	    var args = [];
+	    if (this.peekToken().text !== ')') {
+	      do {
+	        args.push(this.expression());
+	      } while (this.expect(','));
+	    }
+	    return args;
+	  },
+
+	  identifier: function() {
+	    var token = this.consume();
+	    if (!token.identifier) {
+	      this.throwError('is not a valid identifier', token);
+	    }
+	    return { type: AST.Identifier, name: token.text };
+	  },
+
+	  constant: function() {
+	    // TODO check that it is a constant
+	    return { type: AST.Literal, value: this.consume().value };
+	  },
+
+	  arrayDeclaration: function() {
+	    var elements = [];
+	    if (this.peekToken().text !== ']') {
+	      do {
+	        if (this.peek(']')) {
+	          // Support trailing commas per ES5.1.
+	          break;
+	        }
+	        elements.push(this.expression());
+	      } while (this.expect(','));
+	    }
+	    this.consume(']');
+
+	    return { type: AST.ArrayExpression, elements: elements };
+	  },
+
+	  object: function() {
+	    var properties = [], property;
+	    if (this.peekToken().text !== '}') {
+	      do {
+	        if (this.peek('}')) {
+	          // Support trailing commas per ES5.1.
+	          break;
+	        }
+	        property = {type: AST.Property, kind: 'init'};
+	        if (this.peek().constant) {
+	          property.key = this.constant();
+	        } else if (this.peek().identifier) {
+	          property.key = this.identifier();
+	        } else {
+	          this.throwError("invalid key", this.peek());
+	        }
+	        this.consume(':');
+	        property.value = this.expression();
+	        properties.push(property);
+	      } while (this.expect(','));
+	    }
+	    this.consume('}');
+
+	    return {type: AST.ObjectExpression, properties: properties };
 	  },
 
 	  throwError: function(msg, token) {
@@ -12483,15 +13732,29 @@
 	          token.text, msg, (token.index + 1), this.text, this.text.substring(token.index));
 	  },
 
-	  peekToken: function() {
-	    if (this.tokens.length === 0)
+	  consume: function(e1) {
+	    if (this.tokens.length === 0) {
 	      throw $parseMinErr('ueoe', 'Unexpected end of expression: {0}', this.text);
+	    }
+
+	    var token = this.expect(e1);
+	    if (!token) {
+	      this.throwError('is unexpected, expecting [' + e1 + ']', this.peek());
+	    }
+	    return token;
+	  },
+
+	  peekToken: function() {
+	    if (this.tokens.length === 0) {
+	      throw $parseMinErr('ueoe', 'Unexpected end of expression: {0}', this.text);
+	    }
 	    return this.tokens[0];
 	  },
 
 	  peek: function(e1, e2, e3, e4) {
 	    return this.peekAhead(0, e1, e2, e3, e4);
 	  },
+
 	  peekAhead: function(i, e1, e2, e3, e4) {
 	    if (this.tokens.length > i) {
 	      var token = this.tokens[i];
@@ -12513,398 +13776,1041 @@
 	    return false;
 	  },
 
-	  consume: function(e1) {
-	    if (this.tokens.length === 0) {
-	      throw $parseMinErr('ueoe', 'Unexpected end of expression: {0}', this.text);
-	    }
 
-	    var token = this.expect(e1);
-	    if (!token) {
-	      this.throwError('is unexpected, expecting [' + e1 + ']', this.peek());
-	    }
-	    return token;
-	  },
-
-	  unaryFn: function(op, right) {
-	    var fn = OPERATORS[op];
-	    return extend(function $parseUnaryFn(self, locals) {
-	      return fn(self, locals, right);
-	    }, {
-	      constant:right.constant,
-	      inputs: [right]
-	    });
-	  },
-
-	  binaryFn: function(left, op, right, isBranching) {
-	    var fn = OPERATORS[op];
-	    return extend(function $parseBinaryFn(self, locals) {
-	      return fn(self, locals, left, right);
-	    }, {
-	      constant: left.constant && right.constant,
-	      inputs: !isBranching && [left, right]
-	    });
-	  },
-
-	  identifier: function() {
-	    var id = this.consume().text;
-
-	    //Continue reading each `.identifier` unless it is a method invocation
-	    while (this.peek('.') && this.peekAhead(1).identifier && !this.peekAhead(2, '(')) {
-	      id += this.consume().text + this.consume().text;
-	    }
-
-	    return getterFn(id, this.options, this.text);
-	  },
-
-	  constant: function() {
-	    var value = this.consume().value;
-
-	    return extend(function $parseConstant() {
-	      return value;
-	    }, {
-	      constant: true,
-	      literal: true
-	    });
-	  },
-
-	  statements: function() {
-	    var statements = [];
-	    while (true) {
-	      if (this.tokens.length > 0 && !this.peek('}', ')', ';', ']'))
-	        statements.push(this.filterChain());
-	      if (!this.expect(';')) {
-	        // optimize for the common case where there is only one statement.
-	        // TODO(size): maybe we should not support multiple statements?
-	        return (statements.length === 1)
-	            ? statements[0]
-	            : function $parseStatements(self, locals) {
-	                var value;
-	                for (var i = 0, ii = statements.length; i < ii; i++) {
-	                  value = statements[i](self, locals);
-	                }
-	                return value;
-	              };
-	      }
-	    }
-	  },
-
-	  filterChain: function() {
-	    var left = this.expression();
-	    var token;
-	    while ((token = this.expect('|'))) {
-	      left = this.filter(left);
-	    }
-	    return left;
-	  },
-
-	  filter: function(inputFn) {
-	    var fn = this.$filter(this.consume().text);
-	    var argsFn;
-	    var args;
-
-	    if (this.peek(':')) {
-	      argsFn = [];
-	      args = []; // we can safely reuse the array
-	      while (this.expect(':')) {
-	        argsFn.push(this.expression());
-	      }
-	    }
-
-	    var inputs = [inputFn].concat(argsFn || []);
-
-	    return extend(function $parseFilter(self, locals) {
-	      var input = inputFn(self, locals);
-	      if (args) {
-	        args[0] = input;
-
-	        var i = argsFn.length;
-	        while (i--) {
-	          args[i + 1] = argsFn[i](self, locals);
-	        }
-
-	        return fn.apply(undefined, args);
-	      }
-
-	      return fn(input);
-	    }, {
-	      constant: !fn.$stateful && inputs.every(isConstant),
-	      inputs: !fn.$stateful && inputs
-	    });
-	  },
-
-	  expression: function() {
-	    return this.assignment();
-	  },
-
-	  assignment: function() {
-	    var left = this.ternary();
-	    var right;
-	    var token;
-	    if ((token = this.expect('='))) {
-	      if (!left.assign) {
-	        this.throwError('implies assignment but [' +
-	            this.text.substring(0, token.index) + '] can not be assigned to', token);
-	      }
-	      right = this.ternary();
-	      return extend(function $parseAssignment(scope, locals) {
-	        return left.assign(scope, right(scope, locals), locals);
-	      }, {
-	        inputs: [left, right]
-	      });
-	    }
-	    return left;
-	  },
-
-	  ternary: function() {
-	    var left = this.logicalOR();
-	    var middle;
-	    var token;
-	    if ((token = this.expect('?'))) {
-	      middle = this.assignment();
-	      if (this.consume(':')) {
-	        var right = this.assignment();
-
-	        return extend(function $parseTernary(self, locals) {
-	          return left(self, locals) ? middle(self, locals) : right(self, locals);
-	        }, {
-	          constant: left.constant && middle.constant && right.constant
-	        });
-	      }
-	    }
-
-	    return left;
-	  },
-
-	  logicalOR: function() {
-	    var left = this.logicalAND();
-	    var token;
-	    while ((token = this.expect('||'))) {
-	      left = this.binaryFn(left, token.text, this.logicalAND(), true);
-	    }
-	    return left;
-	  },
-
-	  logicalAND: function() {
-	    var left = this.equality();
-	    var token;
-	    while ((token = this.expect('&&'))) {
-	      left = this.binaryFn(left, token.text, this.equality(), true);
-	    }
-	    return left;
-	  },
-
-	  equality: function() {
-	    var left = this.relational();
-	    var token;
-	    while ((token = this.expect('==','!=','===','!=='))) {
-	      left = this.binaryFn(left, token.text, this.relational());
-	    }
-	    return left;
-	  },
-
-	  relational: function() {
-	    var left = this.additive();
-	    var token;
-	    while ((token = this.expect('<', '>', '<=', '>='))) {
-	      left = this.binaryFn(left, token.text, this.additive());
-	    }
-	    return left;
-	  },
-
-	  additive: function() {
-	    var left = this.multiplicative();
-	    var token;
-	    while ((token = this.expect('+','-'))) {
-	      left = this.binaryFn(left, token.text, this.multiplicative());
-	    }
-	    return left;
-	  },
-
-	  multiplicative: function() {
-	    var left = this.unary();
-	    var token;
-	    while ((token = this.expect('*','/','%'))) {
-	      left = this.binaryFn(left, token.text, this.unary());
-	    }
-	    return left;
-	  },
-
-	  unary: function() {
-	    var token;
-	    if (this.expect('+')) {
-	      return this.primary();
-	    } else if ((token = this.expect('-'))) {
-	      return this.binaryFn(Parser.ZERO, token.text, this.unary());
-	    } else if ((token = this.expect('!'))) {
-	      return this.unaryFn(token.text, this.unary());
-	    } else {
-	      return this.primary();
-	    }
-	  },
-
-	  fieldAccess: function(object) {
-	    var getter = this.identifier();
-
-	    return extend(function $parseFieldAccess(scope, locals, self) {
-	      var o = self || object(scope, locals);
-	      return (o == null) ? undefined : getter(o);
-	    }, {
-	      assign: function(scope, value, locals) {
-	        var o = object(scope, locals);
-	        if (!o) object.assign(scope, o = {}, locals);
-	        return getter.assign(o, value);
-	      }
-	    });
-	  },
-
-	  objectIndex: function(obj) {
-	    var expression = this.text;
-
-	    var indexFn = this.expression();
-	    this.consume(']');
-
-	    return extend(function $parseObjectIndex(self, locals) {
-	      var o = obj(self, locals),
-	          i = indexFn(self, locals),
-	          v;
-
-	      ensureSafeMemberName(i, expression);
-	      if (!o) return undefined;
-	      v = ensureSafeObject(o[i], expression);
-	      return v;
-	    }, {
-	      assign: function(self, value, locals) {
-	        var key = ensureSafeMemberName(indexFn(self, locals), expression);
-	        // prevent overwriting of Function.constructor which would break ensureSafeObject check
-	        var o = ensureSafeObject(obj(self, locals), expression);
-	        if (!o) obj.assign(self, o = {}, locals);
-	        return o[key] = value;
-	      }
-	    });
-	  },
-
-	  functionCall: function(fnGetter, contextGetter) {
-	    var argsFn = [];
-	    if (this.peekToken().text !== ')') {
-	      do {
-	        argsFn.push(this.expression());
-	      } while (this.expect(','));
-	    }
-	    this.consume(')');
-
-	    var expressionText = this.text;
-	    // we can safely reuse the array across invocations
-	    var args = argsFn.length ? [] : null;
-
-	    return function $parseFunctionCall(scope, locals) {
-	      var context = contextGetter ? contextGetter(scope, locals) : isDefined(contextGetter) ? undefined : scope;
-	      var fn = fnGetter(scope, locals, context) || noop;
-
-	      if (args) {
-	        var i = argsFn.length;
-	        while (i--) {
-	          args[i] = ensureSafeObject(argsFn[i](scope, locals), expressionText);
-	        }
-	      }
-
-	      ensureSafeObject(context, expressionText);
-	      ensureSafeFunction(fn, expressionText);
-
-	      // IE doesn't have apply for some native functions
-	      var v = fn.apply
-	            ? fn.apply(context, args)
-	            : fn(args[0], args[1], args[2], args[3], args[4]);
-
-	      if (args) {
-	        // Free-up the memory (arguments of the last function call).
-	        args.length = 0;
-	      }
-
-	      return ensureSafeObject(v, expressionText);
-	      };
-	  },
-
-	  // This is used with json array declaration
-	  arrayDeclaration: function() {
-	    var elementFns = [];
-	    if (this.peekToken().text !== ']') {
-	      do {
-	        if (this.peek(']')) {
-	          // Support trailing commas per ES5.1.
-	          break;
-	        }
-	        elementFns.push(this.expression());
-	      } while (this.expect(','));
-	    }
-	    this.consume(']');
-
-	    return extend(function $parseArrayLiteral(self, locals) {
-	      var array = [];
-	      for (var i = 0, ii = elementFns.length; i < ii; i++) {
-	        array.push(elementFns[i](self, locals));
-	      }
-	      return array;
-	    }, {
-	      literal: true,
-	      constant: elementFns.every(isConstant),
-	      inputs: elementFns
-	    });
-	  },
-
-	  object: function() {
-	    var keys = [], valueFns = [];
-	    if (this.peekToken().text !== '}') {
-	      do {
-	        if (this.peek('}')) {
-	          // Support trailing commas per ES5.1.
-	          break;
-	        }
-	        var token = this.consume();
-	        if (token.constant) {
-	          keys.push(token.value);
-	        } else if (token.identifier) {
-	          keys.push(token.text);
-	        } else {
-	          this.throwError("invalid key", token);
-	        }
-	        this.consume(':');
-	        valueFns.push(this.expression());
-	      } while (this.expect(','));
-	    }
-	    this.consume('}');
-
-	    return extend(function $parseObjectLiteral(self, locals) {
-	      var object = {};
-	      for (var i = 0, ii = valueFns.length; i < ii; i++) {
-	        object[keys[i]] = valueFns[i](self, locals);
-	      }
-	      return object;
-	    }, {
-	      literal: true,
-	      constant: valueFns.every(isConstant),
-	      inputs: valueFns
-	    });
+	  /* `undefined` is not a constant, it is an identifier,
+	   * but using it as an identifier is not supported
+	   */
+	  constants: {
+	    'true': { type: AST.Literal, value: true },
+	    'false': { type: AST.Literal, value: false },
+	    'null': { type: AST.Literal, value: null },
+	    'undefined': {type: AST.Literal, value: undefined },
+	    'this': {type: AST.ThisExpression }
 	  }
 	};
 
+	function ifDefined(v, d) {
+	  return typeof v !== 'undefined' ? v : d;
+	}
+
+	function plusFn(l, r) {
+	  if (typeof l === 'undefined') return r;
+	  if (typeof r === 'undefined') return l;
+	  return l + r;
+	}
+
+	function isStateless($filter, filterName) {
+	  var fn = $filter(filterName);
+	  return !fn.$stateful;
+	}
+
+	function findConstantAndWatchExpressions(ast, $filter) {
+	  var allConstants;
+	  var argsToWatch;
+	  switch (ast.type) {
+	  case AST.Program:
+	    allConstants = true;
+	    forEach(ast.body, function(expr) {
+	      findConstantAndWatchExpressions(expr.expression, $filter);
+	      allConstants = allConstants && expr.expression.constant;
+	    });
+	    ast.constant = allConstants;
+	    break;
+	  case AST.Literal:
+	    ast.constant = true;
+	    ast.toWatch = [];
+	    break;
+	  case AST.UnaryExpression:
+	    findConstantAndWatchExpressions(ast.argument, $filter);
+	    ast.constant = ast.argument.constant;
+	    ast.toWatch = ast.argument.toWatch;
+	    break;
+	  case AST.BinaryExpression:
+	    findConstantAndWatchExpressions(ast.left, $filter);
+	    findConstantAndWatchExpressions(ast.right, $filter);
+	    ast.constant = ast.left.constant && ast.right.constant;
+	    ast.toWatch = ast.left.toWatch.concat(ast.right.toWatch);
+	    break;
+	  case AST.LogicalExpression:
+	    findConstantAndWatchExpressions(ast.left, $filter);
+	    findConstantAndWatchExpressions(ast.right, $filter);
+	    ast.constant = ast.left.constant && ast.right.constant;
+	    ast.toWatch = ast.constant ? [] : [ast];
+	    break;
+	  case AST.ConditionalExpression:
+	    findConstantAndWatchExpressions(ast.test, $filter);
+	    findConstantAndWatchExpressions(ast.alternate, $filter);
+	    findConstantAndWatchExpressions(ast.consequent, $filter);
+	    ast.constant = ast.test.constant && ast.alternate.constant && ast.consequent.constant;
+	    ast.toWatch = ast.constant ? [] : [ast];
+	    break;
+	  case AST.Identifier:
+	    ast.constant = false;
+	    ast.toWatch = [ast];
+	    break;
+	  case AST.MemberExpression:
+	    findConstantAndWatchExpressions(ast.object, $filter);
+	    if (ast.computed) {
+	      findConstantAndWatchExpressions(ast.property, $filter);
+	    }
+	    ast.constant = ast.object.constant && (!ast.computed || ast.property.constant);
+	    ast.toWatch = [ast];
+	    break;
+	  case AST.CallExpression:
+	    allConstants = ast.filter ? isStateless($filter, ast.callee.name) : false;
+	    argsToWatch = [];
+	    forEach(ast.arguments, function(expr) {
+	      findConstantAndWatchExpressions(expr, $filter);
+	      allConstants = allConstants && expr.constant;
+	      if (!expr.constant) {
+	        argsToWatch.push.apply(argsToWatch, expr.toWatch);
+	      }
+	    });
+	    ast.constant = allConstants;
+	    ast.toWatch = ast.filter && isStateless($filter, ast.callee.name) ? argsToWatch : [ast];
+	    break;
+	  case AST.AssignmentExpression:
+	    findConstantAndWatchExpressions(ast.left, $filter);
+	    findConstantAndWatchExpressions(ast.right, $filter);
+	    ast.constant = ast.left.constant && ast.right.constant;
+	    ast.toWatch = [ast];
+	    break;
+	  case AST.ArrayExpression:
+	    allConstants = true;
+	    argsToWatch = [];
+	    forEach(ast.elements, function(expr) {
+	      findConstantAndWatchExpressions(expr, $filter);
+	      allConstants = allConstants && expr.constant;
+	      if (!expr.constant) {
+	        argsToWatch.push.apply(argsToWatch, expr.toWatch);
+	      }
+	    });
+	    ast.constant = allConstants;
+	    ast.toWatch = argsToWatch;
+	    break;
+	  case AST.ObjectExpression:
+	    allConstants = true;
+	    argsToWatch = [];
+	    forEach(ast.properties, function(property) {
+	      findConstantAndWatchExpressions(property.value, $filter);
+	      allConstants = allConstants && property.value.constant;
+	      if (!property.value.constant) {
+	        argsToWatch.push.apply(argsToWatch, property.value.toWatch);
+	      }
+	    });
+	    ast.constant = allConstants;
+	    ast.toWatch = argsToWatch;
+	    break;
+	  case AST.ThisExpression:
+	    ast.constant = false;
+	    ast.toWatch = [];
+	    break;
+	  }
+	}
+
+	function getInputs(body) {
+	  if (body.length != 1) return;
+	  var lastExpression = body[0].expression;
+	  var candidate = lastExpression.toWatch;
+	  if (candidate.length !== 1) return candidate;
+	  return candidate[0] !== lastExpression ? candidate : undefined;
+	}
+
+	function isAssignable(ast) {
+	  return ast.type === AST.Identifier || ast.type === AST.MemberExpression;
+	}
+
+	function assignableAST(ast) {
+	  if (ast.body.length === 1 && isAssignable(ast.body[0].expression)) {
+	    return {type: AST.AssignmentExpression, left: ast.body[0].expression, right: {type: AST.NGValueParameter}, operator: '='};
+	  }
+	}
+
+	function isLiteral(ast) {
+	  return ast.body.length === 0 ||
+	      ast.body.length === 1 && (
+	      ast.body[0].expression.type === AST.Literal ||
+	      ast.body[0].expression.type === AST.ArrayExpression ||
+	      ast.body[0].expression.type === AST.ObjectExpression);
+	}
+
+	function isConstant(ast) {
+	  return ast.constant;
+	}
+
+	function ASTCompiler(astBuilder, $filter) {
+	  this.astBuilder = astBuilder;
+	  this.$filter = $filter;
+	}
+
+	ASTCompiler.prototype = {
+	  compile: function(expression, expensiveChecks) {
+	    var self = this;
+	    var ast = this.astBuilder.ast(expression);
+	    this.state = {
+	      nextId: 0,
+	      filters: {},
+	      expensiveChecks: expensiveChecks,
+	      fn: {vars: [], body: [], own: {}},
+	      assign: {vars: [], body: [], own: {}},
+	      inputs: []
+	    };
+	    findConstantAndWatchExpressions(ast, self.$filter);
+	    var extra = '';
+	    var assignable;
+	    this.stage = 'assign';
+	    if ((assignable = assignableAST(ast))) {
+	      this.state.computing = 'assign';
+	      var result = this.nextId();
+	      this.recurse(assignable, result);
+	      extra = 'fn.assign=' + this.generateFunction('assign', 's,v,l');
+	    }
+	    var toWatch = getInputs(ast.body);
+	    self.stage = 'inputs';
+	    forEach(toWatch, function(watch, key) {
+	      var fnKey = 'fn' + key;
+	      self.state[fnKey] = {vars: [], body: [], own: {}};
+	      self.state.computing = fnKey;
+	      var intoId = self.nextId();
+	      self.recurse(watch, intoId);
+	      self.return(intoId);
+	      self.state.inputs.push(fnKey);
+	      watch.watchId = key;
+	    });
+	    this.state.computing = 'fn';
+	    this.stage = 'main';
+	    this.recurse(ast);
+	    var fnString =
+	      // The build and minification steps remove the string "use strict" from the code, but this is done using a regex.
+	      // This is a workaround for this until we do a better job at only removing the prefix only when we should.
+	      '"' + this.USE + ' ' + this.STRICT + '";\n' +
+	      this.filterPrefix() +
+	      'var fn=' + this.generateFunction('fn', 's,l,a,i') +
+	      extra +
+	      this.watchFns() +
+	      'return fn;';
+
+	    /* jshint -W054 */
+	    var fn = (new Function('$filter',
+	        'ensureSafeMemberName',
+	        'ensureSafeObject',
+	        'ensureSafeFunction',
+	        'ifDefined',
+	        'plus',
+	        'text',
+	        fnString))(
+	          this.$filter,
+	          ensureSafeMemberName,
+	          ensureSafeObject,
+	          ensureSafeFunction,
+	          ifDefined,
+	          plusFn,
+	          expression);
+	    /* jshint +W054 */
+	    this.state = this.stage = undefined;
+	    fn.literal = isLiteral(ast);
+	    fn.constant = isConstant(ast);
+	    return fn;
+	  },
+
+	  USE: 'use',
+
+	  STRICT: 'strict',
+
+	  watchFns: function() {
+	    var result = [];
+	    var fns = this.state.inputs;
+	    var self = this;
+	    forEach(fns, function(name) {
+	      result.push('var ' + name + '=' + self.generateFunction(name, 's'));
+	    });
+	    if (fns.length) {
+	      result.push('fn.inputs=[' + fns.join(',') + '];');
+	    }
+	    return result.join('');
+	  },
+
+	  generateFunction: function(name, params) {
+	    return 'function(' + params + '){' +
+	        this.varsPrefix(name) +
+	        this.body(name) +
+	        '};';
+	  },
+
+	  filterPrefix: function() {
+	    var parts = [];
+	    var self = this;
+	    forEach(this.state.filters, function(id, filter) {
+	      parts.push(id + '=$filter(' + self.escape(filter) + ')');
+	    });
+	    if (parts.length) return 'var ' + parts.join(',') + ';';
+	    return '';
+	  },
+
+	  varsPrefix: function(section) {
+	    return this.state[section].vars.length ? 'var ' + this.state[section].vars.join(',') + ';' : '';
+	  },
+
+	  body: function(section) {
+	    return this.state[section].body.join('');
+	  },
+
+	  recurse: function(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck) {
+	    var left, right, self = this, args, expression;
+	    recursionFn = recursionFn || noop;
+	    if (!skipWatchIdCheck && isDefined(ast.watchId)) {
+	      intoId = intoId || this.nextId();
+	      this.if('i',
+	        this.lazyAssign(intoId, this.computedMember('i', ast.watchId)),
+	        this.lazyRecurse(ast, intoId, nameId, recursionFn, create, true)
+	      );
+	      return;
+	    }
+	    switch (ast.type) {
+	    case AST.Program:
+	      forEach(ast.body, function(expression, pos) {
+	        self.recurse(expression.expression, undefined, undefined, function(expr) { right = expr; });
+	        if (pos !== ast.body.length - 1) {
+	          self.current().body.push(right, ';');
+	        } else {
+	          self.return(right);
+	        }
+	      });
+	      break;
+	    case AST.Literal:
+	      expression = this.escape(ast.value);
+	      this.assign(intoId, expression);
+	      recursionFn(expression);
+	      break;
+	    case AST.UnaryExpression:
+	      this.recurse(ast.argument, undefined, undefined, function(expr) { right = expr; });
+	      expression = ast.operator + '(' + this.ifDefined(right, 0) + ')';
+	      this.assign(intoId, expression);
+	      recursionFn(expression);
+	      break;
+	    case AST.BinaryExpression:
+	      this.recurse(ast.left, undefined, undefined, function(expr) { left = expr; });
+	      this.recurse(ast.right, undefined, undefined, function(expr) { right = expr; });
+	      if (ast.operator === '+') {
+	        expression = this.plus(left, right);
+	      } else if (ast.operator === '-') {
+	        expression = this.ifDefined(left, 0) + ast.operator + this.ifDefined(right, 0);
+	      } else {
+	        expression = '(' + left + ')' + ast.operator + '(' + right + ')';
+	      }
+	      this.assign(intoId, expression);
+	      recursionFn(expression);
+	      break;
+	    case AST.LogicalExpression:
+	      intoId = intoId || this.nextId();
+	      self.recurse(ast.left, intoId);
+	      self.if(ast.operator === '&&' ? intoId : self.not(intoId), self.lazyRecurse(ast.right, intoId));
+	      recursionFn(intoId);
+	      break;
+	    case AST.ConditionalExpression:
+	      intoId = intoId || this.nextId();
+	      self.recurse(ast.test, intoId);
+	      self.if(intoId, self.lazyRecurse(ast.alternate, intoId), self.lazyRecurse(ast.consequent, intoId));
+	      recursionFn(intoId);
+	      break;
+	    case AST.Identifier:
+	      intoId = intoId || this.nextId();
+	      if (nameId) {
+	        nameId.context = self.stage === 'inputs' ? 's' : this.assign(this.nextId(), this.getHasOwnProperty('l', ast.name) + '?l:s');
+	        nameId.computed = false;
+	        nameId.name = ast.name;
+	      }
+	      ensureSafeMemberName(ast.name);
+	      self.if(self.stage === 'inputs' || self.not(self.getHasOwnProperty('l', ast.name)),
+	        function() {
+	          self.if(self.stage === 'inputs' || 's', function() {
+	            if (create && create !== 1) {
+	              self.if(
+	                self.not(self.nonComputedMember('s', ast.name)),
+	                self.lazyAssign(self.nonComputedMember('s', ast.name), '{}'));
+	            }
+	            self.assign(intoId, self.nonComputedMember('s', ast.name));
+	          });
+	        }, intoId && self.lazyAssign(intoId, self.nonComputedMember('l', ast.name))
+	        );
+	      if (self.state.expensiveChecks || isPossiblyDangerousMemberName(ast.name)) {
+	        self.addEnsureSafeObject(intoId);
+	      }
+	      recursionFn(intoId);
+	      break;
+	    case AST.MemberExpression:
+	      left = nameId && (nameId.context = this.nextId()) || this.nextId();
+	      intoId = intoId || this.nextId();
+	      self.recurse(ast.object, left, undefined, function() {
+	        self.if(self.notNull(left), function() {
+	          if (ast.computed) {
+	            right = self.nextId();
+	            self.recurse(ast.property, right);
+	            self.addEnsureSafeMemberName(right);
+	            if (create && create !== 1) {
+	              self.if(self.not(self.computedMember(left, right)), self.lazyAssign(self.computedMember(left, right), '{}'));
+	            }
+	            expression = self.ensureSafeObject(self.computedMember(left, right));
+	            self.assign(intoId, expression);
+	            if (nameId) {
+	              nameId.computed = true;
+	              nameId.name = right;
+	            }
+	          } else {
+	            ensureSafeMemberName(ast.property.name);
+	            if (create && create !== 1) {
+	              self.if(self.not(self.nonComputedMember(left, ast.property.name)), self.lazyAssign(self.nonComputedMember(left, ast.property.name), '{}'));
+	            }
+	            expression = self.nonComputedMember(left, ast.property.name);
+	            if (self.state.expensiveChecks || isPossiblyDangerousMemberName(ast.property.name)) {
+	              expression = self.ensureSafeObject(expression);
+	            }
+	            self.assign(intoId, expression);
+	            if (nameId) {
+	              nameId.computed = false;
+	              nameId.name = ast.property.name;
+	            }
+	          }
+	          recursionFn(intoId);
+	        });
+	      }, !!create);
+	      break;
+	    case AST.CallExpression:
+	      intoId = intoId || this.nextId();
+	      if (ast.filter) {
+	        right = self.filter(ast.callee.name);
+	        args = [];
+	        forEach(ast.arguments, function(expr) {
+	          var argument = self.nextId();
+	          self.recurse(expr, argument);
+	          args.push(argument);
+	        });
+	        expression = right + '(' + args.join(',') + ')';
+	        self.assign(intoId, expression);
+	        recursionFn(intoId);
+	      } else {
+	        right = self.nextId();
+	        left = {};
+	        args = [];
+	        self.recurse(ast.callee, right, left, function() {
+	          self.if(self.notNull(right), function() {
+	            self.addEnsureSafeFunction(right);
+	            forEach(ast.arguments, function(expr) {
+	              self.recurse(expr, self.nextId(), undefined, function(argument) {
+	                args.push(self.ensureSafeObject(argument));
+	              });
+	            });
+	            if (left.name) {
+	              if (!self.state.expensiveChecks) {
+	                self.addEnsureSafeObject(left.context);
+	              }
+	              expression = self.member(left.context, left.name, left.computed) + '(' + args.join(',') + ')';
+	            } else {
+	              expression = right + '(' + args.join(',') + ')';
+	            }
+	            expression = self.ensureSafeObject(expression);
+	            self.assign(intoId, expression);
+	            recursionFn(intoId);
+	          });
+	        });
+	      }
+	      break;
+	    case AST.AssignmentExpression:
+	      right = this.nextId();
+	      left = {};
+	      if (!isAssignable(ast.left)) {
+	        throw $parseMinErr('lval', 'Trying to assing a value to a non l-value');
+	      }
+	      this.recurse(ast.left, undefined, left, function() {
+	        self.if(self.notNull(left.context), function() {
+	          self.recurse(ast.right, right);
+	          self.addEnsureSafeObject(self.member(left.context, left.name, left.computed));
+	          expression = self.member(left.context, left.name, left.computed) + ast.operator + right;
+	          self.assign(intoId, expression);
+	          recursionFn(intoId || expression);
+	        });
+	      }, 1);
+	      break;
+	    case AST.ArrayExpression:
+	      args = [];
+	      forEach(ast.elements, function(expr) {
+	        self.recurse(expr, self.nextId(), undefined, function(argument) {
+	          args.push(argument);
+	        });
+	      });
+	      expression = '[' + args.join(',') + ']';
+	      this.assign(intoId, expression);
+	      recursionFn(expression);
+	      break;
+	    case AST.ObjectExpression:
+	      args = [];
+	      forEach(ast.properties, function(property) {
+	        self.recurse(property.value, self.nextId(), undefined, function(expr) {
+	          args.push(self.escape(
+	              property.key.type === AST.Identifier ? property.key.name :
+	                ('' + property.key.value)) +
+	              ':' + expr);
+	        });
+	      });
+	      expression = '{' + args.join(',') + '}';
+	      this.assign(intoId, expression);
+	      recursionFn(expression);
+	      break;
+	    case AST.ThisExpression:
+	      this.assign(intoId, 's');
+	      recursionFn('s');
+	      break;
+	    case AST.NGValueParameter:
+	      this.assign(intoId, 'v');
+	      recursionFn('v');
+	      break;
+	    }
+	  },
+
+	  getHasOwnProperty: function(element, property) {
+	    var key = element + '.' + property;
+	    var own = this.current().own;
+	    if (!own.hasOwnProperty(key)) {
+	      own[key] = this.nextId(false, element + '&&(' + this.escape(property) + ' in ' + element + ')');
+	    }
+	    return own[key];
+	  },
+
+	  assign: function(id, value) {
+	    if (!id) return;
+	    this.current().body.push(id, '=', value, ';');
+	    return id;
+	  },
+
+	  filter: function(filterName) {
+	    if (!this.state.filters.hasOwnProperty(filterName)) {
+	      this.state.filters[filterName] = this.nextId(true);
+	    }
+	    return this.state.filters[filterName];
+	  },
+
+	  ifDefined: function(id, defaultValue) {
+	    return 'ifDefined(' + id + ',' + this.escape(defaultValue) + ')';
+	  },
+
+	  plus: function(left, right) {
+	    return 'plus(' + left + ',' + right + ')';
+	  },
+
+	  'return': function(id) {
+	    this.current().body.push('return ', id, ';');
+	  },
+
+	  'if': function(test, alternate, consequent) {
+	    if (test === true) {
+	      alternate();
+	    } else {
+	      var body = this.current().body;
+	      body.push('if(', test, '){');
+	      alternate();
+	      body.push('}');
+	      if (consequent) {
+	        body.push('else{');
+	        consequent();
+	        body.push('}');
+	      }
+	    }
+	  },
+
+	  not: function(expression) {
+	    return '!(' + expression + ')';
+	  },
+
+	  notNull: function(expression) {
+	    return expression + '!=null';
+	  },
+
+	  nonComputedMember: function(left, right) {
+	    return left + '.' + right;
+	  },
+
+	  computedMember: function(left, right) {
+	    return left + '[' + right + ']';
+	  },
+
+	  member: function(left, right, computed) {
+	    if (computed) return this.computedMember(left, right);
+	    return this.nonComputedMember(left, right);
+	  },
+
+	  addEnsureSafeObject: function(item) {
+	    this.current().body.push(this.ensureSafeObject(item), ';');
+	  },
+
+	  addEnsureSafeMemberName: function(item) {
+	    this.current().body.push(this.ensureSafeMemberName(item), ';');
+	  },
+
+	  addEnsureSafeFunction: function(item) {
+	    this.current().body.push(this.ensureSafeFunction(item), ';');
+	  },
+
+	  ensureSafeObject: function(item) {
+	    return 'ensureSafeObject(' + item + ',text)';
+	  },
+
+	  ensureSafeMemberName: function(item) {
+	    return 'ensureSafeMemberName(' + item + ',text)';
+	  },
+
+	  ensureSafeFunction: function(item) {
+	    return 'ensureSafeFunction(' + item + ',text)';
+	  },
+
+	  lazyRecurse: function(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck) {
+	    var self = this;
+	    return function() {
+	      self.recurse(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck);
+	    };
+	  },
+
+	  lazyAssign: function(id, value) {
+	    var self = this;
+	    return function() {
+	      self.assign(id, value);
+	    };
+	  },
+
+	  stringEscapeRegex: /[^ a-zA-Z0-9]/g,
+
+	  stringEscapeFn: function(c) {
+	    return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
+	  },
+
+	  escape: function(value) {
+	    if (isString(value)) return "'" + value.replace(this.stringEscapeRegex, this.stringEscapeFn) + "'";
+	    if (isNumber(value)) return value.toString();
+	    if (value === true) return 'true';
+	    if (value === false) return 'false';
+	    if (value === null) return 'null';
+	    if (typeof value === 'undefined') return 'undefined';
+
+	    throw $parseMinErr('esc', 'IMPOSSIBLE');
+	  },
+
+	  nextId: function(skip, init) {
+	    var id = 'v' + (this.state.nextId++);
+	    if (!skip) {
+	      this.current().vars.push(id + (init ? '=' + init : ''));
+	    }
+	    return id;
+	  },
+
+	  current: function() {
+	    return this.state[this.state.computing];
+	  }
+	};
+
+
+	function ASTInterpreter(astBuilder, $filter) {
+	  this.astBuilder = astBuilder;
+	  this.$filter = $filter;
+	}
+
+	ASTInterpreter.prototype = {
+	  compile: function(expression, expensiveChecks) {
+	    var self = this;
+	    var ast = this.astBuilder.ast(expression);
+	    this.expression = expression;
+	    this.expensiveChecks = expensiveChecks;
+	    findConstantAndWatchExpressions(ast, self.$filter);
+	    var assignable;
+	    var assign;
+	    if ((assignable = assignableAST(ast))) {
+	      assign = this.recurse(assignable);
+	    }
+	    var toWatch = getInputs(ast.body);
+	    var inputs;
+	    if (toWatch) {
+	      inputs = [];
+	      forEach(toWatch, function(watch, key) {
+	        var input = self.recurse(watch);
+	        watch.input = input;
+	        inputs.push(input);
+	        watch.watchId = key;
+	      });
+	    }
+	    var expressions = [];
+	    forEach(ast.body, function(expression) {
+	      expressions.push(self.recurse(expression.expression));
+	    });
+	    var fn = ast.body.length === 0 ? function() {} :
+	             ast.body.length === 1 ? expressions[0] :
+	             function(scope, locals) {
+	               var lastValue;
+	               forEach(expressions, function(exp) {
+	                 lastValue = exp(scope, locals);
+	               });
+	               return lastValue;
+	             };
+	    if (assign) {
+	      fn.assign = function(scope, value, locals) {
+	        return assign(scope, locals, value);
+	      };
+	    }
+	    if (inputs) {
+	      fn.inputs = inputs;
+	    }
+	    fn.literal = isLiteral(ast);
+	    fn.constant = isConstant(ast);
+	    return fn;
+	  },
+
+	  recurse: function(ast, context, create) {
+	    var left, right, self = this, args, expression;
+	    if (ast.input) {
+	      return this.inputs(ast.input, ast.watchId);
+	    }
+	    switch (ast.type) {
+	    case AST.Literal:
+	      return this.value(ast.value, context);
+	    case AST.UnaryExpression:
+	      right = this.recurse(ast.argument);
+	      return this['unary' + ast.operator](right, context);
+	    case AST.BinaryExpression:
+	      left = this.recurse(ast.left);
+	      right = this.recurse(ast.right);
+	      return this['binary' + ast.operator](left, right, context);
+	    case AST.LogicalExpression:
+	      left = this.recurse(ast.left);
+	      right = this.recurse(ast.right);
+	      return this['binary' + ast.operator](left, right, context);
+	    case AST.ConditionalExpression:
+	      return this['ternary?:'](
+	        this.recurse(ast.test),
+	        this.recurse(ast.alternate),
+	        this.recurse(ast.consequent),
+	        context
+	      );
+	    case AST.Identifier:
+	      ensureSafeMemberName(ast.name, self.expression);
+	      return self.identifier(ast.name,
+	                             self.expensiveChecks || isPossiblyDangerousMemberName(ast.name),
+	                             context, create, self.expression);
+	    case AST.MemberExpression:
+	      left = this.recurse(ast.object, false, !!create);
+	      if (!ast.computed) {
+	        ensureSafeMemberName(ast.property.name, self.expression);
+	        right = ast.property.name;
+	      }
+	      if (ast.computed) right = this.recurse(ast.property);
+	      return ast.computed ?
+	        this.computedMember(left, right, context, create, self.expression) :
+	        this.nonComputedMember(left, right, self.expensiveChecks, context, create, self.expression);
+	    case AST.CallExpression:
+	      args = [];
+	      forEach(ast.arguments, function(expr) {
+	        args.push(self.recurse(expr));
+	      });
+	      if (ast.filter) right = this.$filter(ast.callee.name);
+	      if (!ast.filter) right = this.recurse(ast.callee, true);
+	      return ast.filter ?
+	        function(scope, locals, assign, inputs) {
+	          var values = [];
+	          for (var i = 0; i < args.length; ++i) {
+	            values.push(args[i](scope, locals, assign, inputs));
+	          }
+	          var value = right.apply(undefined, values, inputs);
+	          return context ? {context: undefined, name: undefined, value: value} : value;
+	        } :
+	        function(scope, locals, assign, inputs) {
+	          var rhs = right(scope, locals, assign, inputs);
+	          var value;
+	          if (rhs.value != null) {
+	            ensureSafeObject(rhs.context, self.expression);
+	            ensureSafeFunction(rhs.value, self.expression);
+	            var values = [];
+	            for (var i = 0; i < args.length; ++i) {
+	              values.push(ensureSafeObject(args[i](scope, locals, assign, inputs), self.expression));
+	            }
+	            value = ensureSafeObject(rhs.value.apply(rhs.context, values), self.expression);
+	          }
+	          return context ? {value: value} : value;
+	        };
+	    case AST.AssignmentExpression:
+	      left = this.recurse(ast.left, true, 1);
+	      right = this.recurse(ast.right);
+	      return function(scope, locals, assign, inputs) {
+	        var lhs = left(scope, locals, assign, inputs);
+	        var rhs = right(scope, locals, assign, inputs);
+	        ensureSafeObject(lhs.value, self.expression);
+	        lhs.context[lhs.name] = rhs;
+	        return context ? {value: rhs} : rhs;
+	      };
+	    case AST.ArrayExpression:
+	      args = [];
+	      forEach(ast.elements, function(expr) {
+	        args.push(self.recurse(expr));
+	      });
+	      return function(scope, locals, assign, inputs) {
+	        var value = [];
+	        for (var i = 0; i < args.length; ++i) {
+	          value.push(args[i](scope, locals, assign, inputs));
+	        }
+	        return context ? {value: value} : value;
+	      };
+	    case AST.ObjectExpression:
+	      args = [];
+	      forEach(ast.properties, function(property) {
+	        args.push({key: property.key.type === AST.Identifier ?
+	                        property.key.name :
+	                        ('' + property.key.value),
+	                   value: self.recurse(property.value)
+	        });
+	      });
+	      return function(scope, locals, assign, inputs) {
+	        var value = {};
+	        for (var i = 0; i < args.length; ++i) {
+	          value[args[i].key] = args[i].value(scope, locals, assign, inputs);
+	        }
+	        return context ? {value: value} : value;
+	      };
+	    case AST.ThisExpression:
+	      return function(scope) {
+	        return context ? {value: scope} : scope;
+	      };
+	    case AST.NGValueParameter:
+	      return function(scope, locals, assign, inputs) {
+	        return context ? {value: assign} : assign;
+	      };
+	    }
+	  },
+
+	  'unary+': function(argument, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = argument(scope, locals, assign, inputs);
+	      if (isDefined(arg)) {
+	        arg = +arg;
+	      } else {
+	        arg = 0;
+	      }
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'unary-': function(argument, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = argument(scope, locals, assign, inputs);
+	      if (isDefined(arg)) {
+	        arg = -arg;
+	      } else {
+	        arg = 0;
+	      }
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'unary!': function(argument, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = !argument(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary+': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var lhs = left(scope, locals, assign, inputs);
+	      var rhs = right(scope, locals, assign, inputs);
+	      var arg = plusFn(lhs, rhs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary-': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var lhs = left(scope, locals, assign, inputs);
+	      var rhs = right(scope, locals, assign, inputs);
+	      var arg = (isDefined(lhs) ? lhs : 0) - (isDefined(rhs) ? rhs : 0);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary*': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) * right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary/': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) / right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary%': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) % right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary===': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) === right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary!==': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) !== right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary==': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) == right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary!=': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) != right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary<': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) < right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary>': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) > right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary<=': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) <= right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary>=': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) >= right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary&&': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) && right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'binary||': function(left, right, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = left(scope, locals, assign, inputs) || right(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  'ternary?:': function(test, alternate, consequent, context) {
+	    return function(scope, locals, assign, inputs) {
+	      var arg = test(scope, locals, assign, inputs) ? alternate(scope, locals, assign, inputs) : consequent(scope, locals, assign, inputs);
+	      return context ? {value: arg} : arg;
+	    };
+	  },
+	  value: function(value, context) {
+	    return function() { return context ? {context: undefined, name: undefined, value: value} : value; };
+	  },
+	  identifier: function(name, expensiveChecks, context, create, expression) {
+	    return function(scope, locals, assign, inputs) {
+	      var base = locals && (name in locals) ? locals : scope;
+	      if (create && create !== 1 && base && !(base[name])) {
+	        base[name] = {};
+	      }
+	      var value = base ? base[name] : undefined;
+	      if (expensiveChecks) {
+	        ensureSafeObject(value, expression);
+	      }
+	      if (context) {
+	        return {context: base, name: name, value: value};
+	      } else {
+	        return value;
+	      }
+	    };
+	  },
+	  computedMember: function(left, right, context, create, expression) {
+	    return function(scope, locals, assign, inputs) {
+	      var lhs = left(scope, locals, assign, inputs);
+	      var rhs;
+	      var value;
+	      if (lhs != null) {
+	        rhs = right(scope, locals, assign, inputs);
+	        ensureSafeMemberName(rhs, expression);
+	        if (create && create !== 1 && lhs && !(lhs[rhs])) {
+	          lhs[rhs] = {};
+	        }
+	        value = lhs[rhs];
+	        ensureSafeObject(value, expression);
+	      }
+	      if (context) {
+	        return {context: lhs, name: rhs, value: value};
+	      } else {
+	        return value;
+	      }
+	    };
+	  },
+	  nonComputedMember: function(left, right, expensiveChecks, context, create, expression) {
+	    return function(scope, locals, assign, inputs) {
+	      var lhs = left(scope, locals, assign, inputs);
+	      if (create && create !== 1 && lhs && !(lhs[right])) {
+	        lhs[right] = {};
+	      }
+	      var value = lhs != null ? lhs[right] : undefined;
+	      if (expensiveChecks || isPossiblyDangerousMemberName(right)) {
+	        ensureSafeObject(value, expression);
+	      }
+	      if (context) {
+	        return {context: lhs, name: right, value: value};
+	      } else {
+	        return value;
+	      }
+	    };
+	  },
+	  inputs: function(input, watchId) {
+	    return function(scope, value, locals, inputs) {
+	      if (inputs) return inputs[watchId];
+	      return input(scope, value, locals);
+	    };
+	  }
+	};
+
+	/**
+	 * @constructor
+	 */
+	var Parser = function(lexer, $filter, options) {
+	  this.lexer = lexer;
+	  this.$filter = $filter;
+	  this.options = options;
+	  this.ast = new AST(this.lexer);
+	  this.astCompiler = options.csp ? new ASTInterpreter(this.ast, $filter) :
+	                                   new ASTCompiler(this.ast, $filter);
+	};
+
+	Parser.prototype = {
+	  constructor: Parser,
+
+	  parse: function(text) {
+	    return this.astCompiler.compile(text, this.options.expensiveChecks);
+	  }
+	};
 
 	//////////////////////////////////////////////////
 	// Parser helper functions
 	//////////////////////////////////////////////////
 
-	function setter(obj, locals, path, setValue, fullExp) {
+	function setter(obj, path, setValue, fullExp) {
 	  ensureSafeObject(obj, fullExp);
-	  ensureSafeObject(locals, fullExp);
 
 	  var element = path.split('.'), key;
 	  for (var i = 0; element.length > 1; i++) {
 	    key = ensureSafeMemberName(element.shift(), fullExp);
-	    var propertyObj = (i === 0 && locals && locals[key]) || obj[key];
+	    var propertyObj = ensureSafeObject(obj[key], fullExp);
 	    if (!propertyObj) {
 	      propertyObj = {};
 	      obj[key] = propertyObj;
 	    }
-	    obj = ensureSafeObject(propertyObj, fullExp);
+	    obj = propertyObj;
 	  }
 	  key = ensureSafeMemberName(element.shift(), fullExp);
 	  ensureSafeObject(obj[key], fullExp);
@@ -12917,125 +14823,6 @@
 
 	function isPossiblyDangerousMemberName(name) {
 	  return name == 'constructor';
-	}
-
-	/**
-	 * Implementation of the "Black Hole" variant from:
-	 * - http://jsperf.com/angularjs-parse-getter/4
-	 * - http://jsperf.com/path-evaluation-simplified/7
-	 */
-	function cspSafeGetterFn(key0, key1, key2, key3, key4, fullExp, expensiveChecks) {
-	  ensureSafeMemberName(key0, fullExp);
-	  ensureSafeMemberName(key1, fullExp);
-	  ensureSafeMemberName(key2, fullExp);
-	  ensureSafeMemberName(key3, fullExp);
-	  ensureSafeMemberName(key4, fullExp);
-	  var eso = function(o) {
-	    return ensureSafeObject(o, fullExp);
-	  };
-	  var eso0 = (expensiveChecks || isPossiblyDangerousMemberName(key0)) ? eso : identity;
-	  var eso1 = (expensiveChecks || isPossiblyDangerousMemberName(key1)) ? eso : identity;
-	  var eso2 = (expensiveChecks || isPossiblyDangerousMemberName(key2)) ? eso : identity;
-	  var eso3 = (expensiveChecks || isPossiblyDangerousMemberName(key3)) ? eso : identity;
-	  var eso4 = (expensiveChecks || isPossiblyDangerousMemberName(key4)) ? eso : identity;
-
-	  return function cspSafeGetter(scope, locals) {
-	    var pathVal = (locals && locals.hasOwnProperty(key0)) ? locals : scope;
-
-	    if (pathVal == null) return pathVal;
-	    pathVal = eso0(pathVal[key0]);
-
-	    if (!key1) return pathVal;
-	    if (pathVal == null) return undefined;
-	    pathVal = eso1(pathVal[key1]);
-
-	    if (!key2) return pathVal;
-	    if (pathVal == null) return undefined;
-	    pathVal = eso2(pathVal[key2]);
-
-	    if (!key3) return pathVal;
-	    if (pathVal == null) return undefined;
-	    pathVal = eso3(pathVal[key3]);
-
-	    if (!key4) return pathVal;
-	    if (pathVal == null) return undefined;
-	    pathVal = eso4(pathVal[key4]);
-
-	    return pathVal;
-	  };
-	}
-
-	function getterFnWithEnsureSafeObject(fn, fullExpression) {
-	  return function(s, l) {
-	    return fn(s, l, ensureSafeObject, fullExpression);
-	  };
-	}
-
-	function getterFn(path, options, fullExp) {
-	  var expensiveChecks = options.expensiveChecks;
-	  var getterFnCache = (expensiveChecks ? getterFnCacheExpensive : getterFnCacheDefault);
-	  var fn = getterFnCache[path];
-	  if (fn) return fn;
-
-
-	  var pathKeys = path.split('.'),
-	      pathKeysLength = pathKeys.length;
-
-	  // http://jsperf.com/angularjs-parse-getter/6
-	  if (options.csp) {
-	    if (pathKeysLength < 6) {
-	      fn = cspSafeGetterFn(pathKeys[0], pathKeys[1], pathKeys[2], pathKeys[3], pathKeys[4], fullExp, expensiveChecks);
-	    } else {
-	      fn = function cspSafeGetter(scope, locals) {
-	        var i = 0, val;
-	        do {
-	          val = cspSafeGetterFn(pathKeys[i++], pathKeys[i++], pathKeys[i++], pathKeys[i++],
-	                                pathKeys[i++], fullExp, expensiveChecks)(scope, locals);
-
-	          locals = undefined; // clear after first iteration
-	          scope = val;
-	        } while (i < pathKeysLength);
-	        return val;
-	      };
-	    }
-	  } else {
-	    var code = '';
-	    if (expensiveChecks) {
-	      code += 's = eso(s, fe);\nl = eso(l, fe);\n';
-	    }
-	    var needsEnsureSafeObject = expensiveChecks;
-	    forEach(pathKeys, function(key, index) {
-	      ensureSafeMemberName(key, fullExp);
-	      var lookupJs = (index
-	                      // we simply dereference 's' on any .dot notation
-	                      ? 's'
-	                      // but if we are first then we check locals first, and if so read it first
-	                      : '((l&&l.hasOwnProperty("' + key + '"))?l:s)') + '.' + key;
-	      if (expensiveChecks || isPossiblyDangerousMemberName(key)) {
-	        lookupJs = 'eso(' + lookupJs + ', fe)';
-	        needsEnsureSafeObject = true;
-	      }
-	      code += 'if(s == null) return undefined;\n' +
-	              's=' + lookupJs + ';\n';
-	    });
-	    code += 'return s;';
-
-	    /* jshint -W054 */
-	    var evaledFnGetter = new Function('s', 'l', 'eso', 'fe', code); // s=scope, l=locals, eso=ensureSafeObject
-	    /* jshint +W054 */
-	    evaledFnGetter.toString = valueFn(code);
-	    if (needsEnsureSafeObject) {
-	      evaledFnGetter = getterFnWithEnsureSafeObject(evaledFnGetter, fullExp);
-	    }
-	    fn = evaledFnGetter;
-	  }
-
-	  fn.sharedGetter = true;
-	  fn.assign = function(self, value, locals) {
-	    return setter(self, locals, path, value, path);
-	  };
-	  getterFnCache[path] = fn;
-	  return fn;
 	}
 
 	var objectValueOf = Object.prototype.valueOf;
@@ -13099,8 +14886,6 @@
 	  var cacheDefault = createMap();
 	  var cacheExpensive = createMap();
 
-
-
 	  this.$get = ['$filter', '$sniffer', function($filter, $sniffer) {
 	    var $parseOptions = {
 	          csp: $sniffer.csp,
@@ -13111,27 +14896,13 @@
 	          expensiveChecks: true
 	        };
 
-	    function wrapSharedExpression(exp) {
-	      var wrapped = exp;
-
-	      if (exp.sharedGetter) {
-	        wrapped = function $parseWrapper(self, locals) {
-	          return exp(self, locals);
-	        };
-	        wrapped.literal = exp.literal;
-	        wrapped.constant = exp.constant;
-	        wrapped.assign = exp.assign;
-	      }
-
-	      return wrapped;
-	    }
-
 	    return function $parse(exp, interceptorFn, expensiveChecks) {
 	      var parsedExpression, oneTime, cacheKey;
 
 	      switch (typeof exp) {
 	        case 'string':
-	          cacheKey = exp = exp.trim();
+	          exp = exp.trim();
+	          cacheKey = exp;
 
 	          var cache = (expensiveChecks ? cacheExpensive : cacheDefault);
 	          parsedExpression = cache[cacheKey];
@@ -13141,24 +14912,18 @@
 	              oneTime = true;
 	              exp = exp.substring(2);
 	            }
-
 	            var parseOptions = expensiveChecks ? $parseOptionsExpensive : $parseOptions;
 	            var lexer = new Lexer(parseOptions);
 	            var parser = new Parser(lexer, $filter, parseOptions);
 	            parsedExpression = parser.parse(exp);
-
 	            if (parsedExpression.constant) {
 	              parsedExpression.$$watchDelegate = constantWatchDelegate;
 	            } else if (oneTime) {
-	              //oneTime is not part of the exp passed to the Parser so we may have to
-	              //wrap the parsedExpression before adding a $$watchDelegate
-	              parsedExpression = wrapSharedExpression(parsedExpression);
 	              parsedExpression.$$watchDelegate = parsedExpression.literal ?
-	                oneTimeLiteralWatchDelegate : oneTimeWatchDelegate;
+	                  oneTimeLiteralWatchDelegate : oneTimeWatchDelegate;
 	            } else if (parsedExpression.inputs) {
 	              parsedExpression.$$watchDelegate = inputsWatchDelegate;
 	            }
-
 	            cache[cacheKey] = parsedExpression;
 	          }
 	          return addInterceptor(parsedExpression, interceptorFn);
@@ -13167,24 +14932,9 @@
 	          return addInterceptor(exp, interceptorFn);
 
 	        default:
-	          return addInterceptor(noop, interceptorFn);
+	          return noop;
 	      }
 	    };
-
-	    function collectExpressionInputs(inputs, list) {
-	      for (var i = 0, ii = inputs.length; i < ii; i++) {
-	        var input = inputs[i];
-	        if (!input.constant) {
-	          if (input.inputs) {
-	            collectExpressionInputs(input.inputs, list);
-	          } else if (list.indexOf(input) === -1) { // TODO(perf) can we do better?
-	            list.push(input);
-	          }
-	        }
-	      }
-
-	      return list;
-	    }
 
 	    function expressionInputDirtyCheck(newValue, oldValueOfValue) {
 
@@ -13211,28 +14961,28 @@
 	      return newValue === oldValueOfValue || (newValue !== newValue && oldValueOfValue !== oldValueOfValue);
 	    }
 
-	    function inputsWatchDelegate(scope, listener, objectEquality, parsedExpression) {
-	      var inputExpressions = parsedExpression.$$inputs ||
-	                    (parsedExpression.$$inputs = collectExpressionInputs(parsedExpression.inputs, []));
-
+	    function inputsWatchDelegate(scope, listener, objectEquality, parsedExpression, prettyPrintExpression) {
+	      var inputExpressions = parsedExpression.inputs;
 	      var lastResult;
 
 	      if (inputExpressions.length === 1) {
-	        var oldInputValue = expressionInputDirtyCheck; // init to something unique so that equals check fails
+	        var oldInputValueOf = expressionInputDirtyCheck; // init to something unique so that equals check fails
 	        inputExpressions = inputExpressions[0];
 	        return scope.$watch(function expressionInputWatch(scope) {
 	          var newInputValue = inputExpressions(scope);
-	          if (!expressionInputDirtyCheck(newInputValue, oldInputValue)) {
-	            lastResult = parsedExpression(scope);
-	            oldInputValue = newInputValue && getValueOf(newInputValue);
+	          if (!expressionInputDirtyCheck(newInputValue, oldInputValueOf)) {
+	            lastResult = parsedExpression(scope, undefined, undefined, [newInputValue]);
+	            oldInputValueOf = newInputValue && getValueOf(newInputValue);
 	          }
 	          return lastResult;
-	        }, listener, objectEquality);
+	        }, listener, objectEquality, prettyPrintExpression);
 	      }
 
 	      var oldInputValueOfValues = [];
+	      var oldInputValues = [];
 	      for (var i = 0, ii = inputExpressions.length; i < ii; i++) {
 	        oldInputValueOfValues[i] = expressionInputDirtyCheck; // init to something unique so that equals check fails
+	        oldInputValues[i] = null;
 	      }
 
 	      return scope.$watch(function expressionInputsWatch(scope) {
@@ -13241,16 +14991,17 @@
 	        for (var i = 0, ii = inputExpressions.length; i < ii; i++) {
 	          var newInputValue = inputExpressions[i](scope);
 	          if (changed || (changed = !expressionInputDirtyCheck(newInputValue, oldInputValueOfValues[i]))) {
+	            oldInputValues[i] = newInputValue;
 	            oldInputValueOfValues[i] = newInputValue && getValueOf(newInputValue);
 	          }
 	        }
 
 	        if (changed) {
-	          lastResult = parsedExpression(scope);
+	          lastResult = parsedExpression(scope, undefined, undefined, oldInputValues);
 	        }
 
 	        return lastResult;
-	      }, listener, objectEquality);
+	      }, listener, objectEquality, prettyPrintExpression);
 	    }
 
 	    function oneTimeWatchDelegate(scope, listener, objectEquality, parsedExpression) {
@@ -13317,11 +15068,11 @@
 	          watchDelegate !== oneTimeLiteralWatchDelegate &&
 	          watchDelegate !== oneTimeWatchDelegate;
 
-	      var fn = regularWatch ? function regularInterceptedExpression(scope, locals) {
-	        var value = parsedExpression(scope, locals);
+	      var fn = regularWatch ? function regularInterceptedExpression(scope, locals, assign, inputs) {
+	        var value = parsedExpression(scope, locals, assign, inputs);
 	        return interceptorFn(value, scope, locals);
-	      } : function oneTimeInterceptedExpression(scope, locals) {
-	        var value = parsedExpression(scope, locals);
+	      } : function oneTimeInterceptedExpression(scope, locals, assign, inputs) {
+	        var value = parsedExpression(scope, locals, assign, inputs);
 	        var result = interceptorFn(value, scope, locals);
 	        // we only return the interceptor's result if the
 	        // initial value is defined (for bind-once)
@@ -13336,7 +15087,7 @@
 	        // If there is an interceptor, but no watchDelegate then treat the interceptor like
 	        // we treat filters - it is assumed to be a pure function unless flagged with $stateful
 	        fn.$$watchDelegate = inputsWatchDelegate;
-	        fn.inputs = [parsedExpression];
+	        fn.inputs = parsedExpression.inputs ? parsedExpression.inputs : [parsedExpression];
 	      }
 
 	      return fn;
@@ -13646,24 +15397,24 @@
 	  }
 
 	  function processQueue(state) {
-	    var fn, promise, pending;
+	    var fn, deferred, pending;
 
 	    pending = state.pending;
 	    state.processScheduled = false;
 	    state.pending = undefined;
 	    for (var i = 0, ii = pending.length; i < ii; ++i) {
-	      promise = pending[i][0];
+	      deferred = pending[i][0];
 	      fn = pending[i][state.status];
 	      try {
 	        if (isFunction(fn)) {
-	          promise.resolve(fn(state.value));
+	          deferred.resolve(fn(state.value));
 	        } else if (state.status === 1) {
-	          promise.resolve(state.value);
+	          deferred.resolve(state.value);
 	        } else {
-	          promise.reject(state.value);
+	          deferred.reject(state.value);
 	        }
 	      } catch (e) {
-	        promise.reject(e);
+	        deferred.reject(e);
 	        exceptionHandler(e);
 	      }
 	    }
@@ -14077,6 +15828,7 @@
 	      this.$$destroyed = false;
 	      this.$$listeners = {};
 	      this.$$listenerCount = {};
+	      this.$$watchersCount = 0;
 	      this.$$isolateBindings = null;
 	    }
 
@@ -14152,6 +15904,7 @@
 	                  this.$$childHead = this.$$childTail = null;
 	              this.$$listeners = {};
 	              this.$$listenerCount = {};
+	              this.$$watchersCount = 0;
 	              this.$id = nextUid();
 	              this.$$ChildScope = null;
 	            };
@@ -14298,11 +16051,11 @@
 	       *     comparing for reference equality.
 	       * @returns {function()} Returns a deregistration function for this listener.
 	       */
-	      $watch: function(watchExp, listener, objectEquality) {
+	      $watch: function(watchExp, listener, objectEquality, prettyPrintExpression) {
 	        var get = $parse(watchExp);
 
 	        if (get.$$watchDelegate) {
-	          return get.$$watchDelegate(this, listener, objectEquality, get);
+	          return get.$$watchDelegate(this, listener, objectEquality, get, watchExp);
 	        }
 	        var scope = this,
 	            array = scope.$$watchers,
@@ -14310,7 +16063,7 @@
 	              fn: listener,
 	              last: initWatchVal,
 	              get: get,
-	              exp: watchExp,
+	              exp: prettyPrintExpression || watchExp,
 	              eq: !!objectEquality
 	            };
 
@@ -14326,9 +16079,12 @@
 	        // we use unshift since we use a while loop in $digest for speed.
 	        // the while loop reads in reverse order.
 	        array.unshift(watcher);
+	        incrementWatchersCount(this, 1);
 
 	        return function deregisterWatch() {
-	          arrayRemove(array, watcher);
+	          if (arrayRemove(array, watcher) >= 0) {
+	            incrementWatchersCount(scope, -1);
+	          }
 	          lastDirtyWatch = null;
 	        };
 	      },
@@ -14736,7 +16492,7 @@
 	            // Insanity Warning: scope depth-first traversal
 	            // yes, this code is a bit crazy, but it works and we have tests to prove it!
 	            // this piece should be kept in sync with the traversal in $broadcast
-	            if (!(next = (current.$$childHead ||
+	            if (!(next = ((current.$$watchersCount && current.$$childHead) ||
 	                (current !== target && current.$$nextSibling)))) {
 	              while (current !== target && !(next = current.$$nextSibling)) {
 	                current = current.$parent;
@@ -14811,6 +16567,7 @@
 	        this.$$destroyed = true;
 	        if (this === $rootScope) return;
 
+	        incrementWatchersCount(this, -this.$$watchersCount);
 	        for (var eventName in this.$$listenerCount) {
 	          decrementListenerCount(this, this.$$listenerCount[eventName], eventName);
 	        }
@@ -15232,6 +16989,11 @@
 	      $rootScope.$$phase = null;
 	    }
 
+	    function incrementWatchersCount(current, count) {
+	      do {
+	        current.$$watchersCount += count;
+	      } while ((current = current.$parent));
+	    }
 
 	    function decrementListenerCount(current, count, name) {
 	      do {
@@ -16137,7 +17899,7 @@
 	     * escaping.
 	     *
 	     * @param {string} type The kind of context in which this value is safe for use.  e.g. url,
-	     *   resource_url, html, js and css.
+	     *   resourceUrl, html, js and css.
 	     * @param {*} value The value that that should be considered trusted/safe.
 	     * @returns {*} A value that can be used to stand in for the provided `value` in places
 	     * where Angular expects a $sce.trustAs() return value.
@@ -16406,7 +18168,7 @@
 	  this.$get = ['$window', '$document', function($window, $document) {
 	    var eventSupport = {},
 	        android =
-	          int((/android (\d+)/.exec(lowercase(($window.navigator || {}).userAgent)) || [])[1]),
+	          toInt((/android (\d+)/.exec(lowercase(($window.navigator || {}).userAgent)) || [])[1]),
 	        boxee = /Boxee/i.test(($window.navigator || {}).userAgent),
 	        document = $document[0] || {},
 	        vendorPrefix,
@@ -16433,8 +18195,8 @@
 	      animations  = !!(('animation' in bodyStyle) || (vendorPrefix + 'Animation' in bodyStyle));
 
 	      if (android && (!transitions ||  !animations)) {
-	        transitions = isString(document.body.style.webkitTransition);
-	        animations = isString(document.body.style.webkitAnimation);
+	        transitions = isString(bodyStyle.webkitTransition);
+	        animations = isString(bodyStyle.webkitAnimation);
 	      }
 	    }
 
@@ -16490,7 +18252,7 @@
 	 * @param {string} tpl The HTTP request template URL
 	 * @param {boolean=} ignoreRequestError Whether or not to ignore the exception when the request fails or the template is empty
 	 *
-	 * @return {Promise} the HTTP Promise for the given.
+	 * @return {Promise} a promise for the HTTP response data of the given URL.
 	 *
 	 * @property {number} totalPendingRequests total amount of pending template requests being downloaded.
 	 */
@@ -16515,16 +18277,18 @@
 	      };
 
 	      return $http.get(tpl, httpOptions)
-	        .finally(function() {
+	        ['finally'](function() {
 	          handleRequestFn.totalPendingRequests--;
 	        })
 	        .then(function(response) {
+	          $templateCache.put(tpl, response.data);
 	          return response.data;
 	        }, handleError);
 
 	      function handleError(resp) {
 	        if (!ignoreRequestError) {
-	          throw $compileMinErr('tpload', 'Failed to load template: {0}', tpl);
+	          throw $compileMinErr('tpload', 'Failed to load template: {0} (HTTP status: {1} {2})',
+	            tpl, resp.status, resp.statusText);
 	        }
 	        return $q.reject(resp);
 	      }
@@ -16654,6 +18418,7 @@
 	function $TimeoutProvider() {
 	  this.$get = ['$rootScope', '$browser', '$q', '$$q', '$exceptionHandler',
 	       function($rootScope,   $browser,   $q,   $$q,   $exceptionHandler) {
+
 	    var deferreds = {};
 
 
@@ -16666,15 +18431,18 @@
 	      * block and delegates any exceptions to
 	      * {@link ng.$exceptionHandler $exceptionHandler} service.
 	      *
-	      * The return value of registering a timeout function is a promise, which will be resolved when
-	      * the timeout is reached and the timeout function is executed.
+	      * The return value of calling `$timeout` is a promise, which will be resolved when
+	      * the delay has passed and the timeout function, if provided, is executed.
 	      *
 	      * To cancel a timeout request, call `$timeout.cancel(promise)`.
 	      *
 	      * In tests you can use {@link ngMock.$timeout `$timeout.flush()`} to
 	      * synchronously flush the queue of deferred functions.
 	      *
-	      * @param {function()} fn A function, whose execution should be delayed.
+	      * If you only want a promise that will be resolved after some specified delay
+	      * then you can call `$timeout` without the `fn` function.
+	      *
+	      * @param {function()=} fn A function, whose execution should be delayed.
 	      * @param {number=} [delay=0] Delay in milliseconds.
 	      * @param {boolean=} [invokeApply=true] If set to `false` skips model dirty checking, otherwise
 	      *   will invoke `fn` within the {@link ng.$rootScope.Scope#$apply $apply} block.
@@ -16683,6 +18451,12 @@
 	      *
 	      */
 	    function timeout(fn, delay, invokeApply) {
+	      if (!isFunction(fn)) {
+	        invokeApply = delay;
+	        delay = fn;
+	        fn = noop;
+	      }
+
 	      var skipApply = (isDefined(invokeApply) && !invokeApply),
 	          deferred = (skipApply ? $$q : $q).defer(),
 	          promise = deferred.promise,
@@ -17154,7 +18928,13 @@
 	 */
 	function filterFilter() {
 	  return function(array, expression, comparator) {
-	    if (!isArray(array)) return array;
+	    if (!isArray(array)) {
+	      if (array == null) {
+	        return array;
+	      } else {
+	        throw minErr('filter')('notarray', 'Expected array but received: {0}', array);
+	      }
+	    }
 
 	    var predicateFn;
 	    var matchAgainstAnyProp;
@@ -17341,6 +19121,8 @@
 	 *
 	 * If the input is not a number an empty string is returned.
 	 *
+	 * If the input is an infinite (Infinity/-Infinity) the Infinity symbol '∞' is returned.
+	 *
 	 * @param {number|string} number Number to format.
 	 * @param {(number|string)=} fractionSize Number of decimal places to round the number to.
 	 * If this is not provided then the fraction size is computed from the current locale's number
@@ -17397,16 +19179,22 @@
 
 	var DECIMAL_SEP = '.';
 	function formatNumber(number, pattern, groupSep, decimalSep, fractionSize) {
-	  if (!isFinite(number) || isObject(number)) return '';
+	  if (isObject(number)) return '';
 
 	  var isNegative = number < 0;
 	  number = Math.abs(number);
+
+	  var isInfinity = number === Infinity;
+	  if (!isInfinity && !isFinite(number)) return '';
+
 	  var numStr = number + '',
 	      formatedText = '',
+	      hasExponent = false,
 	      parts = [];
 
-	  var hasExponent = false;
-	  if (numStr.indexOf('e') !== -1) {
+	  if (isInfinity) formatedText = '\u221e';
+
+	  if (!isInfinity && numStr.indexOf('e') !== -1) {
 	    var match = numStr.match(/([\d\.]+)e(-?)(\d+)/);
 	    if (match && match[2] == '-' && match[3] > fractionSize + 1) {
 	      number = 0;
@@ -17416,7 +19204,7 @@
 	    }
 	  }
 
-	  if (!hasExponent) {
+	  if (!isInfinity && !hasExponent) {
 	    var fractionLen = (numStr.split(DECIMAL_SEP)[1] || '').length;
 
 	    // determine fractionSize if it is not specified
@@ -17485,8 +19273,9 @@
 	  }
 	  num = '' + num;
 	  while (num.length < digits) num = '0' + num;
-	  if (trim)
+	  if (trim) {
 	    num = num.substr(num.length - digits);
+	  }
 	  return neg + num;
 	}
 
@@ -17495,8 +19284,9 @@
 	  offset = offset || 0;
 	  return function(date) {
 	    var value = date['get' + name]();
-	    if (offset > 0 || value > -offset)
+	    if (offset > 0 || value > -offset) {
 	      value += offset;
+	    }
 	    if (value === 0 && offset == -12) value = 12;
 	    return padNumber(value, size, trim);
 	  };
@@ -17511,8 +19301,8 @@
 	  };
 	}
 
-	function timeZoneGetter(date) {
-	  var zone = -1 * date.getTimezoneOffset();
+	function timeZoneGetter(date, formats, offset) {
+	  var zone = -1 * offset;
 	  var paddedZone = (zone >= 0) ? "+" : "";
 
 	  paddedZone += padNumber(Math[zone > 0 ? 'floor' : 'ceil'](zone / 60), 2) +
@@ -17642,7 +19432,9 @@
 	 *    specified in the string input, the time is considered to be in the local timezone.
 	 * @param {string=} format Formatting rules (see Description). If not specified,
 	 *    `mediumDate` is used.
-	 * @param {string=} timezone Timezone to be used for formatting. Right now, only `'UTC'` is supported.
+	 * @param {string=} timezone Timezone to be used for formatting. It understands UTC/GMT and the
+	 *    continental US time zone abbreviations, but for general use, use a time zone offset, for
+	 *    example, `'+0430'` (4 hours, 30 minutes east of the Greenwich meridian)
 	 *    If not specified, the timezone of the browser will be used.
 	 * @returns {string} Formatted string or the input if input is not recognized as date/millis.
 	 *
@@ -17688,13 +19480,13 @@
 	          timeSetter = match[8] ? date.setUTCHours : date.setHours;
 
 	      if (match[9]) {
-	        tzHour = int(match[9] + match[10]);
-	        tzMin = int(match[9] + match[11]);
+	        tzHour = toInt(match[9] + match[10]);
+	        tzMin = toInt(match[9] + match[11]);
 	      }
-	      dateSetter.call(date, int(match[1]), int(match[2]) - 1, int(match[3]));
-	      var h = int(match[4] || 0) - tzHour;
-	      var m = int(match[5] || 0) - tzMin;
-	      var s = int(match[6] || 0);
+	      dateSetter.call(date, toInt(match[1]), toInt(match[2]) - 1, toInt(match[3]));
+	      var h = toInt(match[4] || 0) - tzHour;
+	      var m = toInt(match[5] || 0) - tzMin;
+	      var s = toInt(match[6] || 0);
 	      var ms = Math.round(parseFloat('0.' + (match[7] || 0)) * 1000);
 	      timeSetter.call(date, h, m, s, ms);
 	      return date;
@@ -17711,14 +19503,14 @@
 	    format = format || 'mediumDate';
 	    format = $locale.DATETIME_FORMATS[format] || format;
 	    if (isString(date)) {
-	      date = NUMBER_STRING.test(date) ? int(date) : jsonStringToDate(date);
+	      date = NUMBER_STRING.test(date) ? toInt(date) : jsonStringToDate(date);
 	    }
 
 	    if (isNumber(date)) {
 	      date = new Date(date);
 	    }
 
-	    if (!isDate(date)) {
+	    if (!isDate(date) || !isFinite(date.getTime())) {
 	      return date;
 	    }
 
@@ -17733,13 +19525,18 @@
 	      }
 	    }
 
-	    if (timezone && timezone === 'UTC') {
-	      date = new Date(date.getTime());
-	      date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+	    var dateTimezoneOffset = date.getTimezoneOffset();
+	    if (timezone) {
+	      var requestedTimezoneOffset = Date.parse('Jan 01, 1970 00:00:00 ' + timezone) / 60000;
+	      if (!isNaN(requestedTimezoneOffset)) {
+	        date = new Date(date.getTime());
+	        date.setMinutes(date.getMinutes() + dateTimezoneOffset - requestedTimezoneOffset);
+	        dateTimezoneOffset = requestedTimezoneOffset;
+	      }
 	    }
 	    forEach(parts, function(value) {
 	      fn = DATE_FORMATS[value];
-	      text += fn ? fn(date, $locale.DATETIME_FORMATS)
+	      text += fn ? fn(date, $locale.DATETIME_FORMATS, dateTimezoneOffset)
 	                 : value.replace(/(^'|'$)/g, '').replace(/''/g, "'");
 	    });
 
@@ -17825,7 +19622,10 @@
 	 * @param {string|number} limit The length of the returned array or string. If the `limit` number
 	 *     is positive, `limit` number of items from the beginning of the source array/string are copied.
 	 *     If the number is negative, `limit` number  of items from the end of the source array/string
-	 *     are copied. The `limit` will be trimmed if it exceeds `array.length`
+	 *     are copied. The `limit` will be trimmed if it exceeds `array.length`. If `limit` is undefined,
+	 *     the input will be returned unchanged.
+	 * @param {(string|number)=} begin Index at which to begin limitation. As a negative index, `begin`
+	 *     indicates an offset from the end of `input`. Defaults to `0`.
 	 * @returns {Array|string} A new sub-array or substring of length `limit` or less if input array
 	 *     had less than `limit` elements.
 	 *
@@ -17897,21 +19697,28 @@
 	   </example>
 	*/
 	function limitToFilter() {
-	  return function(input, limit) {
-	    if (isNumber(input)) input = input.toString();
-	    if (!isArray(input) && !isString(input)) return input;
-
+	  return function(input, limit, begin) {
 	    if (Math.abs(Number(limit)) === Infinity) {
 	      limit = Number(limit);
 	    } else {
-	      limit = int(limit);
+	      limit = toInt(limit);
 	    }
+	    if (isNaN(limit)) return input;
 
-	    //NaN check on limit
-	    if (limit) {
-	      return limit > 0 ? input.slice(0, limit) : input.slice(limit);
+	    if (isNumber(input)) input = input.toString();
+	    if (!isArray(input) && !isString(input)) return input;
+
+	    begin = (!begin || isNaN(begin)) ? 0 : toInt(begin);
+	    begin = (begin < 0 && begin >= -input.length) ? input.length + begin : begin;
+
+	    if (limit >= 0) {
+	      return input.slice(begin, begin + limit);
 	    } else {
-	      return isString(input) ? "" : [];
+	      if (begin === 0) {
+	        return input.slice(limit, input.length);
+	      } else {
+	        return input.slice(Math.max(0, begin + limit), begin);
+	      }
 	    }
 	  };
 	}
@@ -18146,7 +19953,7 @@
 	var htmlAnchorDirective = valueFn({
 	  restrict: 'E',
 	  compile: function(element, attr) {
-	    if (!attr.href && !attr.xlinkHref && !attr.name) {
+	    if (!attr.href && !attr.xlinkHref) {
 	      return function(scope, element) {
 	        // If the linked element is not an anchor tag anymore, do nothing
 	        if (element[0].nodeName.toLowerCase() !== 'a') return;
@@ -18233,7 +20040,7 @@
 	          }, 5000, 'page should navigate to /123');
 	        });
 
-	        xit('should execute ng-click but not reload when href empty string and name specified', function() {
+	        it('should execute ng-click but not reload when href empty string and name specified', function() {
 	          element(by.id('link-4')).click();
 	          expect(element(by.model('value')).getAttribute('value')).toEqual('4');
 	          expect(element(by.id('link-4')).getAttribute('href')).toBe('');
@@ -18509,22 +20316,34 @@
 
 	var ngAttributeAliasDirectives = {};
 
-
 	// boolean attrs are evaluated
 	forEach(BOOLEAN_ATTR, function(propName, attrName) {
 	  // binding to multiple is not supported
 	  if (propName == "multiple") return;
 
+	  function defaultLinkFn(scope, element, attr) {
+	    scope.$watch(attr[normalized], function ngBooleanAttrWatchAction(value) {
+	      attr.$set(attrName, !!value);
+	    });
+	  }
+
 	  var normalized = directiveNormalize('ng-' + attrName);
+	  var linkFn = defaultLinkFn;
+
+	  if (propName === 'checked') {
+	    linkFn = function(scope, element, attr) {
+	      // ensuring ngChecked doesn't interfere with ngModel when both are set on the same input
+	      if (attr.ngModel !== attr[normalized]) {
+	        defaultLinkFn(scope, element, attr);
+	      }
+	    };
+	  }
+
 	  ngAttributeAliasDirectives[normalized] = function() {
 	    return {
 	      restrict: 'A',
 	      priority: 100,
-	      link: function(scope, element, attr) {
-	        scope.$watch(attr[normalized], function ngBooleanAttrWatchAction(value) {
-	          attr.$set(attrName, !!value);
-	        });
-	      }
+	      link: linkFn
 	    };
 	  };
 	});
@@ -19083,19 +20902,19 @@
 	                alias = controller.$name;
 
 	            if (alias) {
-	              setter(scope, null, alias, controller, alias);
+	              setter(scope, alias, controller, alias);
 	              attr.$observe(attr.name ? 'name' : 'ngForm', function(newValue) {
 	                if (alias === newValue) return;
-	                setter(scope, null, alias, undefined, alias);
+	                setter(scope, alias, undefined, alias);
 	                alias = newValue;
-	                setter(scope, null, alias, controller, alias);
+	                setter(scope, alias, controller, alias);
 	                parentFormCtrl.$$renameControl(controller, alias);
 	              });
 	            }
 	            formElement.on('$destroy', function() {
 	              parentFormCtrl.$removeControl(controller);
 	              if (alias) {
-	                setter(scope, null, alias, undefined, alias);
+	                setter(scope, alias, undefined, alias);
 	              }
 	              extend(controller, nullFormCtrl); //stop propagating child destruction handlers upwards
 	            });
@@ -21113,7 +22932,7 @@
 
 	    function arrayClasses(classVal) {
 	      if (isArray(classVal)) {
-	        return classVal;
+	        return classVal.join(' ').split(' ');
 	      } else if (isString(classVal)) {
 	        return classVal.split(' ');
 	      } else if (isObject(classVal)) {
@@ -23225,10 +25044,10 @@
 	   * * `$rollbackViewValue()` is called.  If we are rolling back the view value to the last
 	   *   committed value then `$render()` is called to update the input control.
 	   * * The value referenced by `ng-model` is changed programmatically and both the `$modelValue` and
-	   *   the `$viewValue` are different to last time.
+	   *   the `$viewValue` are different from last time.
 	   *
 	   * Since `ng-model` does not do a deep watch, `$render()` is only invoked if the values of
-	   * `$modelValue` and `$viewValue` are actually different to their previous value. If `$modelValue`
+	   * `$modelValue` and `$viewValue` are actually different from their previous value. If `$modelValue`
 	   * or `$viewValue` are objects (rather than a string or number) then `$render()` will not be
 	   * invoked if you only change a property on the objects.
 	   */
@@ -23245,7 +25064,7 @@
 	   *
 	   * The default `$isEmpty` function checks whether the value is `undefined`, `''`, `null` or `NaN`.
 	   *
-	   * You can override this for input directives whose concept of being empty is different to the
+	   * You can override this for input directives whose concept of being empty is different from the
 	   * default. The `checkboxInputType` directive does this because in its case a value of `false`
 	   * implies empty.
 	   *
@@ -23892,7 +25711,7 @@
 	 * Sometimes it's helpful to bind `ngModel` to a getter/setter function.  A getter/setter is a
 	 * function that returns a representation of the model when called with zero arguments, and sets
 	 * the internal state of a model when called with an argument. It's sometimes useful to use this
-	 * for models that have an internal representation that's different than what the model exposes
+	 * for models that have an internal representation that's different from what the model exposes
 	 * to the view.
 	 *
 	 * <div class="alert alert-success">
@@ -24004,7 +25823,7 @@
 	 * takes place when a timer expires; this timer will be reset after another change takes place.
 	 *
 	 * Given the nature of `ngModelOptions`, the value displayed inside input fields in the view might
-	 * be different than the value in the actual model. This means that if you update the model you
+	 * be different from the value in the actual model. This means that if you update the model you
 	 * should also invoke {@link ngModel.NgModelController `$rollbackViewValue`} on the relevant input field in
 	 * order to make sure it is synchronized with the model and that any debounced action is canceled.
 	 *
@@ -24149,7 +25968,7 @@
 	    restrict: 'A',
 	    controller: ['$scope', '$attrs', function($scope, $attrs) {
 	      var that = this;
-	      this.$options = $scope.$eval($attrs.ngModelOptions);
+	      this.$options = copy($scope.$eval($attrs.ngModelOptions));
 	      // Allow adding/overriding bound events
 	      if (this.$options.updateOn !== undefined) {
 	        this.$options.updateOnDefault = false;
@@ -24306,6 +26125,650 @@
 	 */
 	var ngNonBindableDirective = ngDirective({ terminal: true, priority: 1000 });
 
+	/* global jqLiteRemove */
+
+	var ngOptionsMinErr = minErr('ngOptions');
+
+	/**
+	 * @ngdoc directive
+	 * @name ngOptions
+	 * @restrict A
+	 *
+	 * @description
+	 *
+	 * The `ngOptions` attribute can be used to dynamically generate a list of `<option>`
+	 * elements for the `<select>` element using the array or object obtained by evaluating the
+	 * `ngOptions` comprehension expression.
+	 *
+	 * In many cases, `ngRepeat` can be used on `<option>` elements instead of `ngOptions` to achieve a
+	 * similar result. However, `ngOptions` provides some benefits such as reducing memory and
+	 * increasing speed by not creating a new scope for each repeated instance, as well as providing
+	 * more flexibility in how the `<select>`'s model is assigned via the `select` **`as`** part of the
+	 * comprehension expression. `ngOptions` should be used when the `<select>` model needs to be bound
+	 *  to a non-string value. This is because an option element can only be bound to string values at
+	 * present.
+	 *
+	 * When an item in the `<select>` menu is selected, the array element or object property
+	 * represented by the selected option will be bound to the model identified by the `ngModel`
+	 * directive.
+	 *
+	 * Optionally, a single hard-coded `<option>` element, with the value set to an empty string, can
+	 * be nested into the `<select>` element. This element will then represent the `null` or "not selected"
+	 * option. See example below for demonstration.
+	 *
+	 * <div class="alert alert-warning">
+	 * **Note:** `ngModel` compares by reference, not value. This is important when binding to an
+	 * array of objects. See an example [in this jsfiddle](http://jsfiddle.net/qWzTb/).
+	 * </div>
+	 *
+	 * ## `select` **`as`**
+	 *
+	 * Using `select` **`as`** will bind the result of the `select` expression to the model, but
+	 * the value of the `<select>` and `<option>` html elements will be either the index (for array data sources)
+	 * or property name (for object data sources) of the value within the collection. If a **`track by`** expression
+	 * is used, the result of that expression will be set as the value of the `option` and `select` elements.
+	 *
+	 *
+	 * ### `select` **`as`** and **`track by`**
+	 *
+	 * <div class="alert alert-warning">
+	 * Do not use `select` **`as`** and **`track by`** in the same expression. They are not designed to work together.
+	 * </div>
+	 *
+	 * Consider the following example:
+	 *
+	 * ```html
+	 * <select ng-options="item.subItem as item.label for item in values track by item.id" ng-model="selected">
+	 * ```
+	 *
+	 * ```js
+	 * $scope.values = [{
+	 *   id: 1,
+	 *   label: 'aLabel',
+	 *   subItem: { name: 'aSubItem' }
+	 * }, {
+	 *   id: 2,
+	 *   label: 'bLabel',
+	 *   subItem: { name: 'bSubItem' }
+	 * }];
+	 *
+	 * $scope.selected = { name: 'aSubItem' };
+	 * ```
+	 *
+	 * With the purpose of preserving the selection, the **`track by`** expression is always applied to the element
+	 * of the data source (to `item` in this example). To calculate whether an element is selected, we do the
+	 * following:
+	 *
+	 * 1. Apply **`track by`** to the elements in the array. In the example: `[1, 2]`
+	 * 2. Apply **`track by`** to the already selected value in `ngModel`.
+	 *    In the example: this is not possible as **`track by`** refers to `item.id`, but the selected
+	 *    value from `ngModel` is `{name: 'aSubItem'}`, so the **`track by`** expression is applied to
+	 *    a wrong object, the selected element can't be found, `<select>` is always reset to the "not
+	 *    selected" option.
+	 *
+	 *
+	 * @param {string} ngModel Assignable angular expression to data-bind to.
+	 * @param {string=} name Property name of the form under which the control is published.
+	 * @param {string=} required The control is considered valid only if value is entered.
+	 * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
+	 *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
+	 *    `required` when you want to data-bind to the `required` attribute.
+	 * @param {comprehension_expression=} ngOptions in one of the following forms:
+	 *
+	 *   * for array data sources:
+	 *     * `label` **`for`** `value` **`in`** `array`
+	 *     * `select` **`as`** `label` **`for`** `value` **`in`** `array`
+	 *     * `label` **`group by`** `group` **`for`** `value` **`in`** `array`
+	 *     * `label` **`disable when`** `disable` **`for`** `value` **`in`** `array`
+	 *     * `label` **`group by`** `group` **`for`** `value` **`in`** `array` **`track by`** `trackexpr`
+	 *     * `label` **`disable when`** `disable` **`for`** `value` **`in`** `array` **`track by`** `trackexpr`
+	 *     * `label` **`for`** `value` **`in`** `array` | orderBy:`orderexpr` **`track by`** `trackexpr`
+	 *        (for including a filter with `track by`)
+	 *   * for object data sources:
+	 *     * `label` **`for (`**`key` **`,`** `value`**`) in`** `object`
+	 *     * `select` **`as`** `label` **`for (`**`key` **`,`** `value`**`) in`** `object`
+	 *     * `label` **`group by`** `group` **`for (`**`key`**`,`** `value`**`) in`** `object`
+	 *     * `label` **`disable when`** `disable` **`for (`**`key`**`,`** `value`**`) in`** `object`
+	 *     * `select` **`as`** `label` **`group by`** `group`
+	 *         **`for` `(`**`key`**`,`** `value`**`) in`** `object`
+	 *     * `select` **`as`** `label` **`disable when`** `disable`
+	 *         **`for` `(`**`key`**`,`** `value`**`) in`** `object`
+	 *
+	 * Where:
+	 *
+	 *   * `array` / `object`: an expression which evaluates to an array / object to iterate over.
+	 *   * `value`: local variable which will refer to each item in the `array` or each property value
+	 *      of `object` during iteration.
+	 *   * `key`: local variable which will refer to a property name in `object` during iteration.
+	 *   * `label`: The result of this expression will be the label for `<option>` element. The
+	 *     `expression` will most likely refer to the `value` variable (e.g. `value.propertyName`).
+	 *   * `select`: The result of this expression will be bound to the model of the parent `<select>`
+	 *      element. If not specified, `select` expression will default to `value`.
+	 *   * `group`: The result of this expression will be used to group options using the `<optgroup>`
+	 *      DOM element.
+	 *   * `disable`: The result of this expression will be used to disable the rendered `<option>`
+	 *      element. Return `true` to disable.
+	 *   * `trackexpr`: Used when working with an array of objects. The result of this expression will be
+	 *      used to identify the objects in the array. The `trackexpr` will most likely refer to the
+	 *     `value` variable (e.g. `value.propertyName`). With this the selection is preserved
+	 *      even when the options are recreated (e.g. reloaded from the server).
+	 *
+	 * @example
+	    <example module="selectExample">
+	      <file name="index.html">
+	        <script>
+	        angular.module('selectExample', [])
+	          .controller('ExampleController', ['$scope', function($scope) {
+	            $scope.colors = [
+	              {name:'black', shade:'dark'},
+	              {name:'white', shade:'light', notAnOption: true},
+	              {name:'red', shade:'dark'},
+	              {name:'blue', shade:'dark', notAnOption: true},
+	              {name:'yellow', shade:'light', notAnOption: false}
+	            ];
+	            $scope.myColor = $scope.colors[2]; // red
+	          }]);
+	        </script>
+	        <div ng-controller="ExampleController">
+	          <ul>
+	            <li ng-repeat="color in colors">
+	              Name: <input ng-model="color.name">
+	              <input type="checkbox" ng-model="color.notAnOption"> Disabled?
+	              [<a href ng-click="colors.splice($index, 1)">X</a>]
+	            </li>
+	            <li>
+	              [<a href ng-click="colors.push({})">add</a>]
+	            </li>
+	          </ul>
+	          <hr/>
+	          Color (null not allowed):
+	          <select ng-model="myColor" ng-options="color.name for color in colors"></select><br>
+
+	          Color (null allowed):
+	          <span  class="nullable">
+	            <select ng-model="myColor" ng-options="color.name for color in colors">
+	              <option value="">-- choose color --</option>
+	            </select>
+	          </span><br/>
+
+	          Color grouped by shade:
+	          <select ng-model="myColor" ng-options="color.name group by color.shade for color in colors">
+	          </select><br/>
+
+	          Color grouped by shade, with some disabled:
+	          <select ng-model="myColor"
+	                  ng-options="color.name group by color.shade disable when color.notAnOption for color in colors">
+	          </select><br/>
+
+
+
+	          Select <a href ng-click="myColor = { name:'not in list', shade: 'other' }">bogus</a>.<br>
+	          <hr/>
+	          Currently selected: {{ {selected_color:myColor} }}
+	          <div style="border:solid 1px black; height:20px"
+	               ng-style="{'background-color':myColor.name}">
+	          </div>
+	        </div>
+	      </file>
+	      <file name="protractor.js" type="protractor">
+	         it('should check ng-options', function() {
+	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('red');
+	           element.all(by.model('myColor')).first().click();
+	           element.all(by.css('select[ng-model="myColor"] option')).first().click();
+	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('black');
+	           element(by.css('.nullable select[ng-model="myColor"]')).click();
+	           element.all(by.css('.nullable select[ng-model="myColor"] option')).first().click();
+	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('null');
+	         });
+	      </file>
+	    </example>
+	 */
+
+	// jshint maxlen: false
+	//                     //00001111111111000000000002222222222000000000000000000000333333333300000000000000000000000004444444444400000000000005555555555555550000000006666666666666660000000777777777777777000000000000000888888888800000000000000000009999999999
+	var NG_OPTIONS_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+group\s+by\s+([\s\S]+?))?(?:\s+disable\s+when\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+([\s\S]+?)(?:\s+track\s+by\s+([\s\S]+?))?$/;
+	                        // 1: value expression (valueFn)
+	                        // 2: label expression (displayFn)
+	                        // 3: group by expression (groupByFn)
+	                        // 4: disable when expression (disableWhenFn)
+	                        // 5: array item variable name
+	                        // 6: object item key variable name
+	                        // 7: object item value variable name
+	                        // 8: collection expression
+	                        // 9: track by expression
+	// jshint maxlen: 100
+
+
+	var ngOptionsDirective = ['$compile', '$parse', function($compile, $parse) {
+
+	  function parseOptionsExpression(optionsExp, selectElement, scope) {
+
+	    var match = optionsExp.match(NG_OPTIONS_REGEXP);
+	    if (!(match)) {
+	      throw ngOptionsMinErr('iexp',
+	        "Expected expression in form of " +
+	        "'_select_ (as _label_)? for (_key_,)?_value_ in _collection_'" +
+	        " but got '{0}'. Element: {1}",
+	        optionsExp, startingTag(selectElement));
+	    }
+
+	    // Extract the parts from the ngOptions expression
+
+	    // The variable name for the value of the item in the collection
+	    var valueName = match[5] || match[7];
+	    // The variable name for the key of the item in the collection
+	    var keyName = match[6];
+
+	    // An expression that generates the viewValue for an option if there is a label expression
+	    var selectAs = / as /.test(match[0]) && match[1];
+	    // An expression that is used to track the id of each object in the options collection
+	    var trackBy = match[9];
+	    // An expression that generates the viewValue for an option if there is no label expression
+	    var valueFn = $parse(match[2] ? match[1] : valueName);
+	    var selectAsFn = selectAs && $parse(selectAs);
+	    var viewValueFn = selectAsFn || valueFn;
+	    var trackByFn = trackBy && $parse(trackBy);
+
+	    // Get the value by which we are going to track the option
+	    // if we have a trackFn then use that (passing scope and locals)
+	    // otherwise just hash the given viewValue
+	    var getTrackByValue = trackBy ?
+	                              function(viewValue, locals) { return trackByFn(scope, locals); } :
+	                              function getHashOfValue(viewValue) { return hashKey(viewValue); };
+	    var displayFn = $parse(match[2] || match[1]);
+	    var groupByFn = $parse(match[3] || '');
+	    var disableWhenFn = $parse(match[4] || '');
+	    var valuesFn = $parse(match[8]);
+
+	    var locals = {};
+	    var getLocals = keyName ? function(value, key) {
+	      locals[keyName] = key;
+	      locals[valueName] = value;
+	      return locals;
+	    } : function(value) {
+	      locals[valueName] = value;
+	      return locals;
+	    };
+
+
+	    function Option(selectValue, viewValue, label, group, disabled) {
+	      this.selectValue = selectValue;
+	      this.viewValue = viewValue;
+	      this.label = label;
+	      this.group = group;
+	      this.disabled = disabled;
+	    }
+
+	    return {
+	      getWatchables: $parse(valuesFn, function(values) {
+	        // Create a collection of things that we would like to watch (watchedArray)
+	        // so that they can all be watched using a single $watchCollection
+	        // that only runs the handler once if anything changes
+	        var watchedArray = [];
+	        values = values || [];
+
+	        Object.keys(values).forEach(function getWatchable(key) {
+	          var locals = getLocals(values[key], key);
+	          var selectValue = getTrackByValue(values[key], locals);
+	          watchedArray.push(selectValue);
+
+	          // Only need to watch the displayFn if there is a specific label expression
+	          if (match[2]) {
+	            var label = displayFn(scope, locals);
+	            watchedArray.push(label);
+	          }
+
+	          // Only need to watch the disableWhenFn if there is a specific disable expression
+	          if (match[4]) {
+	            var disableWhen = disableWhenFn(scope, locals);
+	            watchedArray.push(disableWhen);
+	          }
+	        });
+	        return watchedArray;
+	      }),
+
+	      getOptions: function() {
+
+	        var optionItems = [];
+	        var selectValueMap = {};
+
+	        // The option values were already computed in the `getWatchables` fn,
+	        // which must have been called to trigger `getOptions`
+	        var optionValues = valuesFn(scope) || [];
+
+	        var keys = Object.keys(optionValues);
+	        keys.forEach(function getOption(key) {
+
+	          // Ignore "angular" properties that start with $ or $$
+	          if (key.charAt(0) === '$') return;
+
+	          var value = optionValues[key];
+	          var locals = getLocals(value, key);
+	          var viewValue = viewValueFn(scope, locals);
+	          var selectValue = getTrackByValue(viewValue, locals);
+	          var label = displayFn(scope, locals);
+	          var group = groupByFn(scope, locals);
+	          var disabled = disableWhenFn(scope, locals);
+	          var optionItem = new Option(selectValue, viewValue, label, group, disabled);
+
+	          optionItems.push(optionItem);
+	          selectValueMap[selectValue] = optionItem;
+	        });
+
+	        return {
+	          items: optionItems,
+	          selectValueMap: selectValueMap,
+	          getOptionFromViewValue: function(value) {
+	            return selectValueMap[getTrackByValue(value, getLocals(value))];
+	          }
+	        };
+	      }
+	    };
+	  }
+
+
+	  // we can't just jqLite('<option>') since jqLite is not smart enough
+	  // to create it in <select> and IE barfs otherwise.
+	  var optionTemplate = document.createElement('option'),
+	      optGroupTemplate = document.createElement('optgroup');
+
+	  return {
+	    restrict: 'A',
+	    terminal: true,
+	    require: ['select', '?ngModel'],
+	    link: function(scope, selectElement, attr, ctrls) {
+
+	      // if ngModel is not defined, we don't need to do anything
+	      var ngModelCtrl = ctrls[1];
+	      if (!ngModelCtrl) return;
+
+	      var selectCtrl = ctrls[0];
+	      var multiple = attr.multiple;
+
+	      var emptyOption = selectCtrl.emptyOption;
+	      var providedEmptyOption = !!emptyOption;
+
+	      var unknownOption = jqLite(optionTemplate.cloneNode(false));
+	      unknownOption.val('?');
+
+	      var options;
+	      var ngOptions = parseOptionsExpression(attr.ngOptions, selectElement, scope);
+
+
+	      var renderEmptyOption = function() {
+	        if (!providedEmptyOption) {
+	          selectElement.prepend(emptyOption);
+	        }
+	        selectElement.val('');
+	        emptyOption.prop('selected', true); // needed for IE
+	        emptyOption.attr('selected', true);
+	      };
+
+	      var removeEmptyOption = function() {
+	        if (!providedEmptyOption) {
+	          emptyOption.remove();
+	        }
+	      };
+
+
+	      var renderUnknownOption = function() {
+	        selectElement.prepend(unknownOption);
+	        selectElement.val('?');
+	        unknownOption.prop('selected', true); // needed for IE
+	        unknownOption.attr('selected', true);
+	      };
+
+	      var removeUnknownOption = function() {
+	        unknownOption.remove();
+	      };
+
+
+	      selectCtrl.writeValue = function writeNgOptionsValue(value) {
+	        var option = options.getOptionFromViewValue(value);
+
+	        if (option && !option.disabled) {
+	          if (selectElement[0].value !== option.selectValue) {
+	            removeUnknownOption();
+	            removeEmptyOption();
+
+	            selectElement[0].value = option.selectValue;
+	            option.element.selected = true;
+	            option.element.setAttribute('selected', 'selected');
+	          }
+	        } else {
+	          if (value === null || providedEmptyOption) {
+	            removeUnknownOption();
+	            renderEmptyOption();
+	          } else {
+	            removeEmptyOption();
+	            renderUnknownOption();
+	          }
+	        }
+	      };
+
+	      selectCtrl.readValue = function readNgOptionsValue() {
+
+	        var selectedOption = options.selectValueMap[selectElement.val()];
+
+	        if (selectedOption && !selectedOption.disabled) {
+	          removeEmptyOption();
+	          removeUnknownOption();
+	          return selectedOption.viewValue;
+	        }
+	        return null;
+	      };
+
+
+	      // Update the controller methods for multiple selectable options
+	      if (multiple) {
+
+	        ngModelCtrl.$isEmpty = function(value) {
+	          return !value || value.length === 0;
+	        };
+
+
+	        selectCtrl.writeValue = function writeNgOptionsMultiple(value) {
+	          options.items.forEach(function(option) {
+	            option.element.selected = false;
+	          });
+
+	          if (value) {
+	            value.forEach(function(item) {
+	              var option = options.getOptionFromViewValue(item);
+	              if (option && !option.disabled) option.element.selected = true;
+	            });
+	          }
+	        };
+
+
+	        selectCtrl.readValue = function readNgOptionsMultiple() {
+	          var selectedValues = selectElement.val() || [],
+	              selections = [];
+
+	          forEach(selectedValues, function(value) {
+	            var option = options.selectValueMap[value];
+	            if (!option.disabled) selections.push(option.viewValue);
+	          });
+
+	          return selections;
+	        };
+	      }
+
+
+	      if (providedEmptyOption) {
+
+	        // we need to remove it before calling selectElement.empty() because otherwise IE will
+	        // remove the label from the element. wtf?
+	        emptyOption.remove();
+
+	        // compile the element since there might be bindings in it
+	        $compile(emptyOption)(scope);
+
+	        // remove the class, which is added automatically because we recompile the element and it
+	        // becomes the compilation root
+	        emptyOption.removeClass('ng-scope');
+	      } else {
+	        emptyOption = jqLite(optionTemplate.cloneNode(false));
+	      }
+
+	      // We need to do this here to ensure that the options object is defined
+	      // when we first hit it in writeNgOptionsValue
+	      updateOptions();
+
+	      // We will re-render the option elements if the option values or labels change
+	      scope.$watchCollection(ngOptions.getWatchables, updateOptions);
+
+	      // ------------------------------------------------------------------ //
+
+
+	      function updateOptionElement(option, element) {
+	        option.element = element;
+	        element.disabled = option.disabled;
+	        if (option.value !== element.value) element.value = option.selectValue;
+	        if (option.label !== element.label) {
+	          element.label = option.label;
+	          element.textContent = option.label;
+	        }
+	      }
+
+	      function addOrReuseElement(parent, current, type, templateElement) {
+	        var element;
+	        // Check whether we can reuse the next element
+	        if (current && lowercase(current.nodeName) === type) {
+	          // The next element is the right type so reuse it
+	          element = current;
+	        } else {
+	          // The next element is not the right type so create a new one
+	          element = templateElement.cloneNode(false);
+	          if (!current) {
+	            // There are no more elements so just append it to the select
+	            parent.appendChild(element);
+	          } else {
+	            // The next element is not a group so insert the new one
+	            parent.insertBefore(element, current);
+	          }
+	        }
+	        return element;
+	      }
+
+
+	      function removeExcessElements(current) {
+	        var next;
+	        while (current) {
+	          next = current.nextSibling;
+	          jqLiteRemove(current);
+	          current = next;
+	        }
+	      }
+
+
+	      function skipEmptyAndUnknownOptions(current) {
+	        var emptyOption_ = emptyOption && emptyOption[0];
+	        var unknownOption_ = unknownOption && unknownOption[0];
+
+	        if (emptyOption_ || unknownOption_) {
+	          while (current &&
+	                (current === emptyOption_ ||
+	                current === unknownOption_)) {
+	            current = current.nextSibling;
+	          }
+	        }
+	        return current;
+	      }
+
+
+	      function updateOptions() {
+
+	        var previousValue = options && selectCtrl.readValue();
+
+	        options = ngOptions.getOptions();
+
+	        var groupMap = {};
+	        var currentElement = selectElement[0].firstChild;
+
+	        // Ensure that the empty option is always there if it was explicitly provided
+	        if (providedEmptyOption) {
+	          selectElement.prepend(emptyOption);
+	        }
+
+	        currentElement = skipEmptyAndUnknownOptions(currentElement);
+
+	        options.items.forEach(function updateOption(option) {
+	          var group;
+	          var groupElement;
+	          var optionElement;
+
+	          if (option.group) {
+
+	            // This option is to live in a group
+	            // See if we have already created this group
+	            group = groupMap[option.group];
+
+	            if (!group) {
+
+	              // We have not already created this group
+	              groupElement = addOrReuseElement(selectElement[0],
+	                                               currentElement,
+	                                               'optgroup',
+	                                               optGroupTemplate);
+	              // Move to the next element
+	              currentElement = groupElement.nextSibling;
+
+	              // Update the label on the group element
+	              groupElement.label = option.group;
+
+	              // Store it for use later
+	              group = groupMap[option.group] = {
+	                groupElement: groupElement,
+	                currentOptionElement: groupElement.firstChild
+	              };
+
+	            }
+
+	            // So now we have a group for this option we add the option to the group
+	            optionElement = addOrReuseElement(group.groupElement,
+	                                              group.currentOptionElement,
+	                                              'option',
+	                                              optionTemplate);
+	            updateOptionElement(option, optionElement);
+	            // Move to the next element
+	            group.currentOptionElement = optionElement.nextSibling;
+
+	          } else {
+
+	            // This option is not in a group
+	            optionElement = addOrReuseElement(selectElement[0],
+	                                              currentElement,
+	                                              'option',
+	                                              optionTemplate);
+	            updateOptionElement(option, optionElement);
+	            // Move to the next element
+	            currentElement = optionElement.nextSibling;
+	          }
+	        });
+
+
+	        // Now remove all excess options and group
+	        Object.keys(groupMap).forEach(function(key) {
+	          removeExcessElements(groupMap[key].currentOptionElement);
+	        });
+	        removeExcessElements(currentElement);
+
+	        ngModelCtrl.$render();
+
+	        // Check to see if the value has changed due to the update to the options
+	        if (!ngModelCtrl.$isEmpty(previousValue)) {
+	          var nextValue = selectCtrl.readValue();
+	          if (!equals(previousValue, nextValue)) {
+	            ngModelCtrl.$setViewValue(nextValue);
+	          }
+	        }
+	      }
+
+	    }
+	  };
+	}];
+
 	/**
 	 * @ngdoc directive
 	 * @name ngPluralize
@@ -24359,6 +26822,9 @@
 	 * into pluralized strings. In the previous example, Angular will replace `{}` with
 	 * <span ng-non-bindable>`{{personCount}}`</span>. The closed braces `{}` is a placeholder
 	 * for <span ng-non-bindable>{{numberExpression}}</span>.
+	 *
+	 * If no rule is defined for a category, then an empty string is displayed and a warning is generated.
+	 * Note that some locales define more categories than `one` and `other`. For example, fr-fr defines `few` and `many`.
 	 *
 	 * # Configuring ngPluralize with offset
 	 * The `offset` attribute allows further customization of pluralized text, which can result in
@@ -24478,7 +26944,7 @@
 	      </file>
 	    </example>
 	 */
-	var ngPluralizeDirective = ['$locale', '$interpolate', function($locale, $interpolate) {
+	var ngPluralizeDirective = ['$locale', '$interpolate', '$log', function($locale, $interpolate, $log) {
 	  var BRACE = /{}/g,
 	      IS_WHEN = /^when(Minus)?(.+)$/;
 
@@ -24520,9 +26986,18 @@
 
 	        // If both `count` and `lastCount` are NaN, we don't need to re-register a watch.
 	        // In JS `NaN !== NaN`, so we have to exlicitly check.
-	        if ((count !== lastCount) && !(countIsNaN && isNaN(lastCount))) {
+	        if ((count !== lastCount) && !(countIsNaN && isNumber(lastCount) && isNaN(lastCount))) {
 	          watchRemover();
-	          watchRemover = scope.$watch(whensExpFns[count], updateElementText);
+	          var whenExpFn = whensExpFns[count];
+	          if (isUndefined(whenExpFn)) {
+	            if (newVal != null) {
+	              $log.debug("ngPluralize: no rule defined for '" + count + "' in " + whenExp);
+	            }
+	            watchRemover = noop;
+	            updateElementText();
+	          } else {
+	            watchRemover = scope.$watch(whenExpFn, updateElementText);
+	          }
 	          lastCount = count;
 	        }
 	      });
@@ -24557,6 +27032,7 @@
 	 * Creating aliases for these properties is possible with {@link ng.directive:ngInit `ngInit`}.
 	 * This may be useful when, for instance, nesting ngRepeats.
 	 *
+	 *
 	 * # Iterating over object properties
 	 *
 	 * It is possible to get `ngRepeat` to iterate over the properties of an object using the following
@@ -24567,17 +27043,18 @@
 	 * ```
 	 *
 	 * You need to be aware that the JavaScript specification does not define what order
-	 * it will return the keys for an object. In order to have a guaranteed deterministic order
-	 * for the keys, Angular versions up to and including 1.3 **sort the keys alphabetically**.
+	 * it will return the keys for an object. (To mitigate this in Angular 1.3 the `ngRepeat` directive
+	 * used to sort the keys alphabetically.)
+	 *
+	 * Version 1.4 removed the alphabetic sorting. We now rely on the order returned by the browser
+	 * when running `for key in myObj`. It seems that browsers generally follow the strategy of providing
+	 * keys in the order in which they were defined, although there are exceptions when keys are deleted
+	 * and reinstated. See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete#Cross-browser_issues
 	 *
 	 * If this is not desired, the recommended workaround is to convert your object into an array
 	 * that is sorted into the order that you prefer before providing it to `ngRepeat`.  You could
 	 * do this with a filter such as [toArrayFilter](http://ngmodules.org/modules/angular-toArrayFilter)
 	 * or implement a `$watch` on the object yourself.
-	 *
-	 * In version 1.4 we will remove the sorting, since it seems that browsers generally follow the
-	 * strategy of providing keys in the order in which they were defined, although there are exceptions
-	 * when keys are deleted and reinstated.
 	 *
 	 *
 	 * # Tracking and Duplicates
@@ -24724,6 +27201,11 @@
 	 *
 	 *     For example: `item in items | filter:x as results` will store the fragment of the repeated items as `results`, but only after
 	 *     the items have been processed through the filter.
+	 *
+	 *     Please note that `as [variable name] is not an operator but rather a part of ngRepeat micro-syntax so it can be used only at the end
+	 *     (and not as operator, inside an expression).
+	 *
+	 *     For example: `item in items | filter : x | orderBy : order | limitTo : limit as results` .
 	 *
 	 * @example
 	 * This example initializes the scope to a list of names and
@@ -24941,14 +27423,13 @@
 	            trackByIdFn = trackByIdExpFn || trackByIdArrayFn;
 	          } else {
 	            trackByIdFn = trackByIdExpFn || trackByIdObjFn;
-	            // if object, extract keys, sort them and use to determine order of iteration over obj props
+	            // if object, extract keys, in enumeration order, unsorted
 	            collectionKeys = [];
 	            for (var itemKey in collection) {
-	              if (collection.hasOwnProperty(itemKey) && itemKey.charAt(0) != '$') {
+	              if (collection.hasOwnProperty(itemKey) && itemKey.charAt(0) !== '$') {
 	                collectionKeys.push(itemKey);
 	              }
 	            }
-	            collectionKeys.sort();
 	          }
 
 	          collectionLength = collectionKeys.length;
@@ -25565,7 +28046,6 @@
 	 */
 	var ngSwitchDirective = ['$animate', function($animate) {
 	  return {
-	    restrict: 'EA',
 	    require: 'ngSwitch',
 
 	    // asks for $scope to fool the BC controller module
@@ -25760,7 +28240,113 @@
 	  };
 	}];
 
-	var ngOptionsMinErr = minErr('ngOptions');
+	var noopNgModelController = { $setViewValue: noop, $render: noop };
+
+	/**
+	 * @ngdoc type
+	 * @name  select.SelectController
+	 * @description
+	 * The controller for the `<select>` directive. This provides support for reading
+	 * and writing the selected value(s) of the control and also coordinates dynamically
+	 * added `<option>` elements, perhaps by an `ngRepeat` directive.
+	 */
+	var SelectController =
+	        ['$element', '$scope', '$attrs', function($element, $scope, $attrs) {
+
+	  var self = this,
+	      optionsMap = new HashMap();
+
+	  // If the ngModel doesn't get provided then provide a dummy noop version to prevent errors
+	  self.ngModelCtrl = noopNgModelController;
+
+	  // The "unknown" option is one that is prepended to the list if the viewValue
+	  // does not match any of the options. When it is rendered the value of the unknown
+	  // option is '? XXX ?' where XXX is the hashKey of the value that is not known.
+	  //
+	  // We can't just jqLite('<option>') since jqLite is not smart enough
+	  // to create it in <select> and IE barfs otherwise.
+	  self.unknownOption = jqLite(document.createElement('option'));
+	  self.renderUnknownOption = function(val) {
+	    var unknownVal = '? ' + hashKey(val) + ' ?';
+	    self.unknownOption.val(unknownVal);
+	    $element.prepend(self.unknownOption);
+	    $element.val(unknownVal);
+	  };
+
+	  $scope.$on('$destroy', function() {
+	    // disable unknown option so that we don't do work when the whole select is being destroyed
+	    self.renderUnknownOption = noop;
+	  });
+
+	  self.removeUnknownOption = function() {
+	    if (self.unknownOption.parent()) self.unknownOption.remove();
+	  };
+
+	  // Here we find the option that represents the "empty" value, i.e. the option with a value
+	  // of `""`.  This option needs to be accessed (to select it directly) when setting the value
+	  // of the select to `""` because IE9 will not automatically select the option.
+	  //
+	  // Additionally, the `ngOptions` directive uses this option to allow the application developer
+	  // to provide their own custom "empty" option when the viewValue does not match any of the
+	  // option values.
+	  for (var i = 0, children = $element.children(), ii = children.length; i < ii; i++) {
+	    if (children[i].value === '') {
+	      self.emptyOption = children.eq(i);
+	      break;
+	    }
+	  }
+
+	  // Read the value of the select control, the implementation of this changes depending
+	  // upon whether the select can have multiple values and whether ngOptions is at work.
+	  self.readValue = function readSingleValue() {
+	    self.removeUnknownOption();
+	    return $element.val();
+	  };
+
+
+	  // Write the value to the select control, the implementation of this changes depending
+	  // upon whether the select can have multiple values and whether ngOptions is at work.
+	  self.writeValue = function writeSingleValue(value) {
+	    if (self.hasOption(value)) {
+	      self.removeUnknownOption();
+	      $element.val(value);
+	      if (value === '') self.emptyOption.prop('selected', true); // to make IE9 happy
+	    } else {
+	      if (isUndefined(value) && self.emptyOption) {
+	        self.removeUnknownOption();
+	        $element.val('');
+	      } else {
+	        self.renderUnknownOption(value);
+	      }
+	    }
+	  };
+
+
+	  // Tell the select control that an option, with the given value, has been added
+	  self.addOption = function(value) {
+	    assertNotHasOwnProperty(value, '"option value"');
+	    var count = optionsMap.get(value) || 0;
+	    optionsMap.put(value, count + 1);
+	  };
+
+	  // Tell the select control that an option, with the given value, has been removed
+	  self.removeOption = function(value) {
+	    var count = optionsMap.get(value);
+	    if (count) {
+	      if (count === 1) {
+	        optionsMap.remove(value);
+	      } else {
+	        optionsMap.put(value, count - 1);
+	      }
+	    }
+	  };
+
+	  // Check whether the select control has an option matching the given value
+	  self.hasOption = function(value) {
+	    return !!optionsMap.get(value);
+	  };
+	}];
+
 	/**
 	 * @ngdoc directive
 	 * @name select
@@ -25769,23 +28355,20 @@
 	 * @description
 	 * HTML `SELECT` element with angular data-binding.
 	 *
-	 * # `ngOptions`
-	 *
-	 * The `ngOptions` attribute can be used to dynamically generate a list of `<option>`
-	 * elements for the `<select>` element using the array or object obtained by evaluating the
-	 * `ngOptions` comprehension expression.
-	 *
-	 * In many cases, `ngRepeat` can be used on `<option>` elements instead of `ngOptions` to achieve a
-	 * similar result. However, `ngOptions` provides some benefits such as reducing memory and
-	 * increasing speed by not creating a new scope for each repeated instance, as well as providing
+	 * In many cases, `ngRepeat` can be used on `<option>` elements instead of {@link ng.directive:ngOptions
+	 * ngOptions} to achieve a similar result. However, `ngOptions` provides some benefits such as reducing
+	 * memory and increasing speed by not creating a new scope for each repeated instance, as well as providing
 	 * more flexibility in how the `<select>`'s model is assigned via the `select` **`as`** part of the
 	 * comprehension expression. `ngOptions` should be used when the `<select>` model needs to be bound
-	 *  to a non-string value. This is because an option element can only be bound to string values at
+	 * to a non-string value. This is because an option element can only be bound to string values at
 	 * present.
 	 *
 	 * When an item in the `<select>` menu is selected, the array element or object property
 	 * represented by the selected option will be bound to the model identified by the `ngModel`
 	 * directive.
+	 *
+	 * If the viewValue contains a value that doesn't match any of the options then the control
+	 * will automatically add an "unknown" option, which it then removes when this is resolved.
 	 *
 	 * Optionally, a single hard-coded `<option>` element, with the value set to an empty string, can
 	 * be nested into the `<select>` element. This element will then represent the `null` or "not selected"
@@ -25796,307 +28379,61 @@
 	 * array of objects. See an example [in this jsfiddle](http://jsfiddle.net/qWzTb/).
 	 * </div>
 	 *
-	 * ## `select` **`as`**
-	 *
-	 * Using `select` **`as`** will bind the result of the `select` expression to the model, but
-	 * the value of the `<select>` and `<option>` html elements will be either the index (for array data sources)
-	 * or property name (for object data sources) of the value within the collection. If a **`track by`** expression
-	 * is used, the result of that expression will be set as the value of the `option` and `select` elements.
-	 *
-	 *
-	 * ### `select` **`as`** and **`track by`**
-	 *
-	 * <div class="alert alert-warning">
-	 * Do not use `select` **`as`** and **`track by`** in the same expression. They are not designed to work together.
-	 * </div>
-	 *
-	 * Consider the following example:
-	 *
-	 * ```html
-	 * <select ng-options="item.subItem as item.label for item in values track by item.id" ng-model="selected">
-	 * ```
-	 *
-	 * ```js
-	 * $scope.values = [{
-	 *   id: 1,
-	 *   label: 'aLabel',
-	 *   subItem: { name: 'aSubItem' }
-	 * }, {
-	 *   id: 2,
-	 *   label: 'bLabel',
-	 *   subItem: { name: 'bSubItem' }
-	 * }];
-	 *
-	 * $scope.selected = { name: 'aSubItem' };
-	 * ```
-	 *
-	 * With the purpose of preserving the selection, the **`track by`** expression is always applied to the element
-	 * of the data source (to `item` in this example). To calculate whether an element is selected, we do the
-	 * following:
-	 *
-	 * 1. Apply **`track by`** to the elements in the array. In the example: `[1, 2]`
-	 * 2. Apply **`track by`** to the already selected value in `ngModel`.
-	 *    In the example: this is not possible as **`track by`** refers to `item.id`, but the selected
-	 *    value from `ngModel` is `{name: 'aSubItem'}`, so the **`track by`** expression is applied to
-	 *    a wrong object, the selected element can't be found, `<select>` is always reset to the "not
-	 *    selected" option.
-	 *
-	 *
-	 * @param {string} ngModel Assignable angular expression to data-bind to.
-	 * @param {string=} name Property name of the form under which the control is published.
-	 * @param {string=} required The control is considered valid only if value is entered.
-	 * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
-	 *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
-	 *    `required` when you want to data-bind to the `required` attribute.
-	 * @param {comprehension_expression=} ngOptions in one of the following forms:
-	 *
-	 *   * for array data sources:
-	 *     * `label` **`for`** `value` **`in`** `array`
-	 *     * `select` **`as`** `label` **`for`** `value` **`in`** `array`
-	 *     * `label` **`group by`** `group` **`for`** `value` **`in`** `array`
-	 *     * `label` **`group by`** `group` **`for`** `value` **`in`** `array` **`track by`** `trackexpr`
-	 *     * `label` **`for`** `value` **`in`** `array` | orderBy:`orderexpr` **`track by`** `trackexpr`
-	 *        (for including a filter with `track by`)
-	 *   * for object data sources:
-	 *     * `label` **`for (`**`key` **`,`** `value`**`) in`** `object`
-	 *     * `select` **`as`** `label` **`for (`**`key` **`,`** `value`**`) in`** `object`
-	 *     * `label` **`group by`** `group` **`for (`**`key`**`,`** `value`**`) in`** `object`
-	 *     * `select` **`as`** `label` **`group by`** `group`
-	 *         **`for` `(`**`key`**`,`** `value`**`) in`** `object`
-	 *
-	 * Where:
-	 *
-	 *   * `array` / `object`: an expression which evaluates to an array / object to iterate over.
-	 *   * `value`: local variable which will refer to each item in the `array` or each property value
-	 *      of `object` during iteration.
-	 *   * `key`: local variable which will refer to a property name in `object` during iteration.
-	 *   * `label`: The result of this expression will be the label for `<option>` element. The
-	 *     `expression` will most likely refer to the `value` variable (e.g. `value.propertyName`).
-	 *   * `select`: The result of this expression will be bound to the model of the parent `<select>`
-	 *      element. If not specified, `select` expression will default to `value`.
-	 *   * `group`: The result of this expression will be used to group options using the `<optgroup>`
-	 *      DOM element.
-	 *   * `trackexpr`: Used when working with an array of objects. The result of this expression will be
-	 *      used to identify the objects in the array. The `trackexpr` will most likely refer to the
-	 *     `value` variable (e.g. `value.propertyName`). With this the selection is preserved
-	 *      even when the options are recreated (e.g. reloaded from the server).
-	 *
-	 * @example
-	    <example module="selectExample">
-	      <file name="index.html">
-	        <script>
-	        angular.module('selectExample', [])
-	          .controller('ExampleController', ['$scope', function($scope) {
-	            $scope.colors = [
-	              {name:'black', shade:'dark'},
-	              {name:'white', shade:'light'},
-	              {name:'red', shade:'dark'},
-	              {name:'blue', shade:'dark'},
-	              {name:'yellow', shade:'light'}
-	            ];
-	            $scope.myColor = $scope.colors[2]; // red
-	          }]);
-	        </script>
-	        <div ng-controller="ExampleController">
-	          <ul>
-	            <li ng-repeat="color in colors">
-	              Name: <input ng-model="color.name">
-	              [<a href ng-click="colors.splice($index, 1)">X</a>]
-	            </li>
-	            <li>
-	              [<a href ng-click="colors.push({})">add</a>]
-	            </li>
-	          </ul>
-	          <hr/>
-	          Color (null not allowed):
-	          <select ng-model="myColor" ng-options="color.name for color in colors"></select><br>
-
-	          Color (null allowed):
-	          <span  class="nullable">
-	            <select ng-model="myColor" ng-options="color.name for color in colors">
-	              <option value="">-- choose color --</option>
-	            </select>
-	          </span><br/>
-
-	          Color grouped by shade:
-	          <select ng-model="myColor" ng-options="color.name group by color.shade for color in colors">
-	          </select><br/>
-
-
-	          Select <a href ng-click="myColor = { name:'not in list', shade: 'other' }">bogus</a>.<br>
-	          <hr/>
-	          Currently selected: {{ {selected_color:myColor} }}
-	          <div style="border:solid 1px black; height:20px"
-	               ng-style="{'background-color':myColor.name}">
-	          </div>
-	        </div>
-	      </file>
-	      <file name="protractor.js" type="protractor">
-	         it('should check ng-options', function() {
-	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('red');
-	           element.all(by.model('myColor')).first().click();
-	           element.all(by.css('select[ng-model="myColor"] option')).first().click();
-	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('black');
-	           element(by.css('.nullable select[ng-model="myColor"]')).click();
-	           element.all(by.css('.nullable select[ng-model="myColor"] option')).first().click();
-	           expect(element(by.binding('{selected_color:myColor}')).getText()).toMatch('null');
-	         });
-	      </file>
-	    </example>
 	 */
-
-	var ngOptionsDirective = valueFn({
-	  restrict: 'A',
-	  terminal: true
-	});
-
-	// jshint maxlen: false
-	var selectDirective = ['$compile', '$parse', function($compile,   $parse) {
-	                         //000011111111110000000000022222222220000000000000000000003333333333000000000000004444444444444440000000005555555555555550000000666666666666666000000000000000777777777700000000000000000008888888888
-	  var NG_OPTIONS_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+group\s+by\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+([\s\S]+?)(?:\s+track\s+by\s+([\s\S]+?))?$/,
-	      nullModelCtrl = {$setViewValue: noop};
-	// jshint maxlen: 100
+	var selectDirective = function() {
+	  var lastView;
 
 	  return {
 	    restrict: 'E',
 	    require: ['select', '?ngModel'],
-	    controller: ['$element', '$scope', '$attrs', function($element, $scope, $attrs) {
-	      var self = this,
-	          optionsMap = {},
-	          ngModelCtrl = nullModelCtrl,
-	          nullOption,
-	          unknownOption;
-
-
-	      self.databound = $attrs.ngModel;
-
-
-	      self.init = function(ngModelCtrl_, nullOption_, unknownOption_) {
-	        ngModelCtrl = ngModelCtrl_;
-	        nullOption = nullOption_;
-	        unknownOption = unknownOption_;
-	      };
-
-
-	      self.addOption = function(value, element) {
-	        assertNotHasOwnProperty(value, '"option value"');
-	        optionsMap[value] = true;
-
-	        if (ngModelCtrl.$viewValue == value) {
-	          $element.val(value);
-	          if (unknownOption.parent()) unknownOption.remove();
-	        }
-	        // Workaround for https://code.google.com/p/chromium/issues/detail?id=381459
-	        // Adding an <option selected="selected"> element to a <select required="required"> should
-	        // automatically select the new element
-	        if (element && element[0].hasAttribute('selected')) {
-	          element[0].selected = true;
-	        }
-	      };
-
-
-	      self.removeOption = function(value) {
-	        if (this.hasOption(value)) {
-	          delete optionsMap[value];
-	          if (ngModelCtrl.$viewValue === value) {
-	            this.renderUnknownOption(value);
-	          }
-	        }
-	      };
-
-
-	      self.renderUnknownOption = function(val) {
-	        var unknownVal = '? ' + hashKey(val) + ' ?';
-	        unknownOption.val(unknownVal);
-	        $element.prepend(unknownOption);
-	        $element.val(unknownVal);
-	        unknownOption.prop('selected', true); // needed for IE
-	      };
-
-
-	      self.hasOption = function(value) {
-	        return optionsMap.hasOwnProperty(value);
-	      };
-
-	      $scope.$on('$destroy', function() {
-	        // disable unknown option so that we don't do work when the whole select is being destroyed
-	        self.renderUnknownOption = noop;
-	      });
-	    }],
-
+	    controller: SelectController,
 	    link: function(scope, element, attr, ctrls) {
+
 	      // if ngModel is not defined, we don't need to do anything
-	      if (!ctrls[1]) return;
+	      var ngModelCtrl = ctrls[1];
+	      if (!ngModelCtrl) return;
 
-	      var selectCtrl = ctrls[0],
-	          ngModelCtrl = ctrls[1],
-	          multiple = attr.multiple,
-	          optionsExp = attr.ngOptions,
-	          nullOption = false, // if false, user will not be able to select it (used by ngOptions)
-	          emptyOption,
-	          renderScheduled = false,
-	          // we can't just jqLite('<option>') since jqLite is not smart enough
-	          // to create it in <select> and IE barfs otherwise.
-	          optionTemplate = jqLite(document.createElement('option')),
-	          optGroupTemplate =jqLite(document.createElement('optgroup')),
-	          unknownOption = optionTemplate.clone();
+	      var selectCtrl = ctrls[0];
 
-	      // find "null" option
-	      for (var i = 0, children = element.children(), ii = children.length; i < ii; i++) {
-	        if (children[i].value === '') {
-	          emptyOption = nullOption = children.eq(i);
-	          break;
-	        }
-	      }
+	      selectCtrl.ngModelCtrl = ngModelCtrl;
 
-	      selectCtrl.init(ngModelCtrl, nullOption, unknownOption);
+	      // We delegate rendering to the `writeValue` method, which can be changed
+	      // if the select can have multiple selected values or if the options are being
+	      // generated by `ngOptions`
+	      ngModelCtrl.$render = function() {
+	        selectCtrl.writeValue(ngModelCtrl.$viewValue);
+	      };
 
-	      // required validator
-	      if (multiple) {
-	        ngModelCtrl.$isEmpty = function(value) {
-	          return !value || value.length === 0;
-	        };
-	      }
-
-	      if (optionsExp) setupAsOptions(scope, element, ngModelCtrl);
-	      else if (multiple) setupAsMultiple(scope, element, ngModelCtrl);
-	      else setupAsSingle(scope, element, ngModelCtrl, selectCtrl);
-
-
-	      ////////////////////////////
-
-
-
-	      function setupAsSingle(scope, selectElement, ngModelCtrl, selectCtrl) {
-	        ngModelCtrl.$render = function() {
-	          var viewValue = ngModelCtrl.$viewValue;
-
-	          if (selectCtrl.hasOption(viewValue)) {
-	            if (unknownOption.parent()) unknownOption.remove();
-	            selectElement.val(viewValue);
-	            if (viewValue === '') emptyOption.prop('selected', true); // to make IE9 happy
-	          } else {
-	            if (isUndefined(viewValue) && emptyOption) {
-	              selectElement.val('');
-	            } else {
-	              selectCtrl.renderUnknownOption(viewValue);
-	            }
-	          }
-	        };
-
-	        selectElement.on('change', function() {
-	          scope.$apply(function() {
-	            if (unknownOption.parent()) unknownOption.remove();
-	            ngModelCtrl.$setViewValue(selectElement.val());
-	          });
+	      // When the selected item(s) changes we delegate getting the value of the select control
+	      // to the `readValue` method, which can be changed if the select can have multiple
+	      // selected values or if the options are being generated by `ngOptions`
+	      element.on('change', function() {
+	        scope.$apply(function() {
+	          ngModelCtrl.$setViewValue(selectCtrl.readValue());
 	        });
-	      }
+	      });
 
-	      function setupAsMultiple(scope, selectElement, ctrl) {
-	        var lastView;
-	        ctrl.$render = function() {
-	          var items = new HashMap(ctrl.$viewValue);
-	          forEach(selectElement.find('option'), function(option) {
+	      // If the select allows multiple values then we need to modify how we read and write
+	      // values from and to the control; also what it means for the value to be empty and
+	      // we have to add an extra watch since ngModel doesn't work well with arrays - it
+	      // doesn't trigger rendering if only an item in the array changes.
+	      if (attr.multiple) {
+
+	        // Read value now needs to check each option to see if it is selected
+	        selectCtrl.readValue = function readMultipleValue() {
+	          var array = [];
+	          forEach(element.find('option'), function(option) {
+	            if (option.selected) {
+	              array.push(option.value);
+	            }
+	          });
+	          return array;
+	        };
+
+	        // Write value now needs to set the selected property of each matching option
+	        selectCtrl.writeValue = function writeMultipleValue(value) {
+	          var items = new HashMap(value);
+	          forEach(element.find('option'), function(option) {
 	            option.selected = isDefined(items.get(option.value));
 	          });
 	        };
@@ -26104,400 +28441,45 @@
 	        // we have to do it on each watch since ngModel watches reference, but
 	        // we need to work of an array, so we need to see if anything was inserted/removed
 	        scope.$watch(function selectMultipleWatch() {
-	          if (!equals(lastView, ctrl.$viewValue)) {
-	            lastView = shallowCopy(ctrl.$viewValue);
-	            ctrl.$render();
+	          if (!equals(lastView, ngModelCtrl.$viewValue)) {
+	            lastView = shallowCopy(ngModelCtrl.$viewValue);
+	            ngModelCtrl.$render();
 	          }
 	        });
 
-	        selectElement.on('change', function() {
-	          scope.$apply(function() {
-	            var array = [];
-	            forEach(selectElement.find('option'), function(option) {
-	              if (option.selected) {
-	                array.push(option.value);
-	              }
-	            });
-	            ctrl.$setViewValue(array);
-	          });
-	        });
-	      }
+	        // If we are a multiple select then value is now a collection
+	        // so the meaning of $isEmpty changes
+	        ngModelCtrl.$isEmpty = function(value) {
+	          return !value || value.length === 0;
+	        };
 
-	      function setupAsOptions(scope, selectElement, ctrl) {
-	        var match;
-
-	        if (!(match = optionsExp.match(NG_OPTIONS_REGEXP))) {
-	          throw ngOptionsMinErr('iexp',
-	            "Expected expression in form of " +
-	            "'_select_ (as _label_)? for (_key_,)?_value_ in _collection_'" +
-	            " but got '{0}'. Element: {1}",
-	            optionsExp, startingTag(selectElement));
-	        }
-
-	        var displayFn = $parse(match[2] || match[1]),
-	            valueName = match[4] || match[6],
-	            selectAs = / as /.test(match[0]) && match[1],
-	            selectAsFn = selectAs ? $parse(selectAs) : null,
-	            keyName = match[5],
-	            groupByFn = $parse(match[3] || ''),
-	            valueFn = $parse(match[2] ? match[1] : valueName),
-	            valuesFn = $parse(match[7]),
-	            track = match[8],
-	            trackFn = track ? $parse(match[8]) : null,
-	            trackKeysCache = {},
-	            // This is an array of array of existing option groups in DOM.
-	            // We try to reuse these if possible
-	            // - optionGroupsCache[0] is the options with no option group
-	            // - optionGroupsCache[?][0] is the parent: either the SELECT or OPTGROUP element
-	            optionGroupsCache = [[{element: selectElement, label:''}]],
-	            //re-usable object to represent option's locals
-	            locals = {};
-
-	        if (nullOption) {
-	          // compile the element since there might be bindings in it
-	          $compile(nullOption)(scope);
-
-	          // remove the class, which is added automatically because we recompile the element and it
-	          // becomes the compilation root
-	          nullOption.removeClass('ng-scope');
-
-	          // we need to remove it before calling selectElement.empty() because otherwise IE will
-	          // remove the label from the element. wtf?
-	          nullOption.remove();
-	        }
-
-	        // clear contents, we'll add what's needed based on the model
-	        selectElement.empty();
-
-	        selectElement.on('change', selectionChanged);
-
-	        ctrl.$render = render;
-
-	        scope.$watchCollection(valuesFn, scheduleRendering);
-	        scope.$watchCollection(getLabels, scheduleRendering);
-
-	        if (multiple) {
-	          scope.$watchCollection(function() { return ctrl.$modelValue; }, scheduleRendering);
-	        }
-
-	        // ------------------------------------------------------------------ //
-
-	        function callExpression(exprFn, key, value) {
-	          locals[valueName] = value;
-	          if (keyName) locals[keyName] = key;
-	          return exprFn(scope, locals);
-	        }
-
-	        function selectionChanged() {
-	          scope.$apply(function() {
-	            var collection = valuesFn(scope) || [];
-	            var viewValue;
-	            if (multiple) {
-	              viewValue = [];
-	              forEach(selectElement.val(), function(selectedKey) {
-	                  selectedKey = trackFn ? trackKeysCache[selectedKey] : selectedKey;
-	                viewValue.push(getViewValue(selectedKey, collection[selectedKey]));
-	              });
-	            } else {
-	              var selectedKey = trackFn ? trackKeysCache[selectElement.val()] : selectElement.val();
-	              viewValue = getViewValue(selectedKey, collection[selectedKey]);
-	            }
-	            ctrl.$setViewValue(viewValue);
-	            render();
-	          });
-	        }
-
-	        function getViewValue(key, value) {
-	          if (key === '?') {
-	            return undefined;
-	          } else if (key === '') {
-	            return null;
-	          } else {
-	            var viewValueFn = selectAsFn ? selectAsFn : valueFn;
-	            return callExpression(viewValueFn, key, value);
-	          }
-	        }
-
-	        function getLabels() {
-	          var values = valuesFn(scope);
-	          var toDisplay;
-	          if (values && isArray(values)) {
-	            toDisplay = new Array(values.length);
-	            for (var i = 0, ii = values.length; i < ii; i++) {
-	              toDisplay[i] = callExpression(displayFn, i, values[i]);
-	            }
-	            return toDisplay;
-	          } else if (values) {
-	            // TODO: Add a test for this case
-	            toDisplay = {};
-	            for (var prop in values) {
-	              if (values.hasOwnProperty(prop)) {
-	                toDisplay[prop] = callExpression(displayFn, prop, values[prop]);
-	              }
-	            }
-	          }
-	          return toDisplay;
-	        }
-
-	        function createIsSelectedFn(viewValue) {
-	          var selectedSet;
-	          if (multiple) {
-	            if (trackFn && isArray(viewValue)) {
-
-	              selectedSet = new HashMap([]);
-	              for (var trackIndex = 0; trackIndex < viewValue.length; trackIndex++) {
-	                // tracking by key
-	                selectedSet.put(callExpression(trackFn, null, viewValue[trackIndex]), true);
-	              }
-	            } else {
-	              selectedSet = new HashMap(viewValue);
-	            }
-	          } else if (trackFn) {
-	            viewValue = callExpression(trackFn, null, viewValue);
-	          }
-
-	          return function isSelected(key, value) {
-	            var compareValueFn;
-	            if (trackFn) {
-	              compareValueFn = trackFn;
-	            } else if (selectAsFn) {
-	              compareValueFn = selectAsFn;
-	            } else {
-	              compareValueFn = valueFn;
-	            }
-
-	            if (multiple) {
-	              return isDefined(selectedSet.remove(callExpression(compareValueFn, key, value)));
-	            } else {
-	              return viewValue === callExpression(compareValueFn, key, value);
-	            }
-	          };
-	        }
-
-	        function scheduleRendering() {
-	          if (!renderScheduled) {
-	            scope.$$postDigest(render);
-	            renderScheduled = true;
-	          }
-	        }
-
-	        /**
-	         * A new labelMap is created with each render.
-	         * This function is called for each existing option with added=false,
-	         * and each new option with added=true.
-	         * - Labels that are passed to this method twice,
-	         * (once with added=true and once with added=false) will end up with a value of 0, and
-	         * will cause no change to happen to the corresponding option.
-	         * - Labels that are passed to this method only once with added=false will end up with a
-	         * value of -1 and will eventually be passed to selectCtrl.removeOption()
-	         * - Labels that are passed to this method only once with added=true will end up with a
-	         * value of 1 and will eventually be passed to selectCtrl.addOption()
-	        */
-	        function updateLabelMap(labelMap, label, added) {
-	          labelMap[label] = labelMap[label] || 0;
-	          labelMap[label] += (added ? 1 : -1);
-	        }
-
-	        function render() {
-	          renderScheduled = false;
-
-	          // Temporary location for the option groups before we render them
-	          var optionGroups = {'':[]},
-	              optionGroupNames = [''],
-	              optionGroupName,
-	              optionGroup,
-	              option,
-	              existingParent, existingOptions, existingOption,
-	              viewValue = ctrl.$viewValue,
-	              values = valuesFn(scope) || [],
-	              keys = keyName ? sortedKeys(values) : values,
-	              key,
-	              value,
-	              groupLength, length,
-	              groupIndex, index,
-	              labelMap = {},
-	              selected,
-	              isSelected = createIsSelectedFn(viewValue),
-	              anySelected = false,
-	              lastElement,
-	              element,
-	              label,
-	              optionId;
-
-	          trackKeysCache = {};
-
-	          // We now build up the list of options we need (we merge later)
-	          for (index = 0; length = keys.length, index < length; index++) {
-	            key = index;
-	            if (keyName) {
-	              key = keys[index];
-	              if (key.charAt(0) === '$') continue;
-	            }
-	            value = values[key];
-
-	            optionGroupName = callExpression(groupByFn, key, value) || '';
-	            if (!(optionGroup = optionGroups[optionGroupName])) {
-	              optionGroup = optionGroups[optionGroupName] = [];
-	              optionGroupNames.push(optionGroupName);
-	            }
-
-	            selected = isSelected(key, value);
-	            anySelected = anySelected || selected;
-
-	            label = callExpression(displayFn, key, value); // what will be seen by the user
-
-	            // doing displayFn(scope, locals) || '' overwrites zero values
-	            label = isDefined(label) ? label : '';
-	            optionId = trackFn ? trackFn(scope, locals) : (keyName ? keys[index] : index);
-	            if (trackFn) {
-	              trackKeysCache[optionId] = key;
-	            }
-
-	            optionGroup.push({
-	              // either the index into array or key from object
-	              id: optionId,
-	              label: label,
-	              selected: selected                   // determine if we should be selected
-	            });
-	          }
-	          if (!multiple) {
-	            if (nullOption || viewValue === null) {
-	              // insert null option if we have a placeholder, or the model is null
-	              optionGroups[''].unshift({id:'', label:'', selected:!anySelected});
-	            } else if (!anySelected) {
-	              // option could not be found, we have to insert the undefined item
-	              optionGroups[''].unshift({id:'?', label:'', selected:true});
-	            }
-	          }
-
-	          // Now we need to update the list of DOM nodes to match the optionGroups we computed above
-	          for (groupIndex = 0, groupLength = optionGroupNames.length;
-	               groupIndex < groupLength;
-	               groupIndex++) {
-	            // current option group name or '' if no group
-	            optionGroupName = optionGroupNames[groupIndex];
-
-	            // list of options for that group. (first item has the parent)
-	            optionGroup = optionGroups[optionGroupName];
-
-	            if (optionGroupsCache.length <= groupIndex) {
-	              // we need to grow the optionGroups
-	              existingParent = {
-	                element: optGroupTemplate.clone().attr('label', optionGroupName),
-	                label: optionGroup.label
-	              };
-	              existingOptions = [existingParent];
-	              optionGroupsCache.push(existingOptions);
-	              selectElement.append(existingParent.element);
-	            } else {
-	              existingOptions = optionGroupsCache[groupIndex];
-	              existingParent = existingOptions[0];  // either SELECT (no group) or OPTGROUP element
-
-	              // update the OPTGROUP label if not the same.
-	              if (existingParent.label != optionGroupName) {
-	                existingParent.element.attr('label', existingParent.label = optionGroupName);
-	              }
-	            }
-
-	            lastElement = null;  // start at the beginning
-	            for (index = 0, length = optionGroup.length; index < length; index++) {
-	              option = optionGroup[index];
-	              if ((existingOption = existingOptions[index + 1])) {
-	                // reuse elements
-	                lastElement = existingOption.element;
-	                if (existingOption.label !== option.label) {
-	                  updateLabelMap(labelMap, existingOption.label, false);
-	                  updateLabelMap(labelMap, option.label, true);
-	                  lastElement.text(existingOption.label = option.label);
-	                  lastElement.prop('label', existingOption.label);
-	                }
-	                if (existingOption.id !== option.id) {
-	                  lastElement.val(existingOption.id = option.id);
-	                }
-	                // lastElement.prop('selected') provided by jQuery has side-effects
-	                if (lastElement[0].selected !== option.selected) {
-	                  lastElement.prop('selected', (existingOption.selected = option.selected));
-	                  if (msie) {
-	                    // See #7692
-	                    // The selected item wouldn't visually update on IE without this.
-	                    // Tested on Win7: IE9, IE10 and IE11. Future IEs should be tested as well
-	                    lastElement.prop('selected', existingOption.selected);
-	                  }
-	                }
-	              } else {
-	                // grow elements
-
-	                // if it's a null option
-	                if (option.id === '' && nullOption) {
-	                  // put back the pre-compiled element
-	                  element = nullOption;
-	                } else {
-	                  // jQuery(v1.4.2) Bug: We should be able to chain the method calls, but
-	                  // in this version of jQuery on some browser the .text() returns a string
-	                  // rather then the element.
-	                  (element = optionTemplate.clone())
-	                      .val(option.id)
-	                      .prop('selected', option.selected)
-	                      .attr('selected', option.selected)
-	                      .prop('label', option.label)
-	                      .text(option.label);
-	                }
-
-	                existingOptions.push(existingOption = {
-	                    element: element,
-	                    label: option.label,
-	                    id: option.id,
-	                    selected: option.selected
-	                });
-	                updateLabelMap(labelMap, option.label, true);
-	                if (lastElement) {
-	                  lastElement.after(element);
-	                } else {
-	                  existingParent.element.append(element);
-	                }
-	                lastElement = element;
-	              }
-	            }
-	            // remove any excessive OPTIONs in a group
-	            index++; // increment since the existingOptions[0] is parent element not OPTION
-	            while (existingOptions.length > index) {
-	              option = existingOptions.pop();
-	              updateLabelMap(labelMap, option.label, false);
-	              option.element.remove();
-	            }
-	          }
-	          // remove any excessive OPTGROUPs from select
-	          while (optionGroupsCache.length > groupIndex) {
-	            // remove all the labels in the option group
-	            optionGroup = optionGroupsCache.pop();
-	            for (index = 1; index < optionGroup.length; ++index) {
-	              updateLabelMap(labelMap, optionGroup[index].label, false);
-	            }
-	            optionGroup[0].element.remove();
-	          }
-	          forEach(labelMap, function(count, label) {
-	            if (count > 0) {
-	              selectCtrl.addOption(label);
-	            } else if (count < 0) {
-	              selectCtrl.removeOption(label);
-	            }
-	          });
-	        }
 	      }
 	    }
 	  };
-	}];
+	};
 
+
+	// The option directive is purely designed to communicate the existence (or lack of)
+	// of dynamically created (and destroyed) option elements to their containing select
+	// directive via its controller.
 	var optionDirective = ['$interpolate', function($interpolate) {
-	  var nullSelectCtrl = {
-	    addOption: noop,
-	    removeOption: noop
-	  };
+
+	  function chromeHack(optionElement) {
+	    // Workaround for https://code.google.com/p/chromium/issues/detail?id=381459
+	    // Adding an <option selected="selected"> element to a <select required="required"> should
+	    // automatically select the new element
+	    if (optionElement[0].hasAttribute('selected')) {
+	      optionElement[0].selected = true;
+	    }
+	  }
 
 	  return {
 	    restrict: 'E',
 	    priority: 100,
 	    compile: function(element, attr) {
+
+	      // If the value attribute is not defined then we fall back to the
+	      // text content of the option element, which may be interpolated
 	      if (isUndefined(attr.value)) {
 	        var interpolateFn = $interpolate(element.text(), true);
 	        if (!interpolateFn) {
@@ -26506,30 +28488,39 @@
 	      }
 
 	      return function(scope, element, attr) {
+
+	        // This is an optimization over using ^^ since we don't want to have to search
+	        // all the way to the root of the DOM for every single option element
 	        var selectCtrlName = '$selectController',
 	            parent = element.parent(),
 	            selectCtrl = parent.data(selectCtrlName) ||
 	              parent.parent().data(selectCtrlName); // in case we are in optgroup
 
-	        if (!selectCtrl || !selectCtrl.databound) {
-	          selectCtrl = nullSelectCtrl;
-	        }
+	        // Only update trigger option updates if this is an option within a `select`
+	        // that also has `ngModel` attached
+	        if (selectCtrl && selectCtrl.ngModelCtrl) {
 
-	        if (interpolateFn) {
-	          scope.$watch(interpolateFn, function interpolateWatchAction(newVal, oldVal) {
-	            attr.$set('value', newVal);
-	            if (oldVal !== newVal) {
-	              selectCtrl.removeOption(oldVal);
-	            }
-	            selectCtrl.addOption(newVal, element);
+	          if (interpolateFn) {
+	            scope.$watch(interpolateFn, function interpolateWatchAction(newVal, oldVal) {
+	              attr.$set('value', newVal);
+	              if (oldVal !== newVal) {
+	                selectCtrl.removeOption(oldVal);
+	              }
+	              selectCtrl.addOption(newVal, element);
+	              selectCtrl.ngModelCtrl.$render();
+	              chromeHack(element);
+	            });
+	          } else {
+	            selectCtrl.addOption(attr.value, element);
+	            selectCtrl.ngModelCtrl.$render();
+	            chromeHack(element);
+	          }
+
+	          element.on('$destroy', function() {
+	            selectCtrl.removeOption(attr.value);
+	            selectCtrl.ngModelCtrl.$render();
 	          });
-	        } else {
-	          selectCtrl.addOption(attr.value, element);
 	        }
-
-	        element.on('$destroy', function() {
-	          selectCtrl.removeOption(attr.value);
-	        });
 	      };
 	    }
 	  };
@@ -26600,7 +28591,7 @@
 
 	      var maxlength = -1;
 	      attr.$observe('maxlength', function(value) {
-	        var intVal = int(value);
+	        var intVal = toInt(value);
 	        maxlength = isNaN(intVal) ? -1 : intVal;
 	        ctrl.$validate();
 	      });
@@ -26620,7 +28611,7 @@
 
 	      var minlength = 0;
 	      attr.$observe('minlength', function(value) {
-	        minlength = int(value) || 0;
+	        minlength = toInt(value) || 0;
 	        ctrl.$validate();
 	      });
 	      ctrl.$validators.minlength = function(modelValue, viewValue) {
@@ -26651,1040 +28642,17 @@
 	!window.angular.$$csp() && window.angular.element(document).find('head').prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}</style>');
 
 /***/ },
-/* 11 */
+/* 8 */,
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = function() {
-		var list = [];
-		list.toString = function toString() {
-			var result = [];
-			for(var i = 0; i < this.length; i++) {
-				var item = this[i];
-				if(item[2]) {
-					result.push("@media " + item[2] + "{" + item[1] + "}");
-				} else {
-					result.push(item[1]);
-				}
-			}
-			return result.join("");
-		};
-		return list;
-	}
+	module.exports = __webpack_require__.p + "components/dashboard/dashboard.html"
 
 /***/ },
-/* 12 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = "data:application/font-woff;base64,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"
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	module.exports = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAIAAAAVFBUnAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpBRkUyNDUyNjBGQkZFMjExOTA3REM1NjQxRDI0QUIwQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpBRDAwM0Q4MUMyMzIxMUUyQTEwNkJDNERFRjYyMTAyQSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpBRDAwM0Q4MEMyMzIxMUUyQTEwNkJDNERFRjYyMTAyQSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBRkUyNDUyNjBGQkZFMjExOTA3REM1NjQxRDI0QUIwQyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBRkUyNDUyNjBGQkZFMjExOTA3REM1NjQxRDI0QUIwQyIvPiA8L3JkZjpEZXNjcmlwdGlv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LAAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAAAIEFAAAAAACBBQAAAAAAgQUAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAAAAEFgAAAAAABBYAAAAAAAQWAAAAAACAwAIAAAAAgMACAAAAAIDAAgAAAACAwAIAAAAAABBYAAAAAAAQWAAAAAAAEFgAAAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAABAYAEAAAAAQGABAAAAAEBgAQAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAACBBQAAAAAAgQUAAAAAAIEFAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAAABBYAAAAAAAQWAAAAAAAEFgAAAAAAgMACAAAAAIDAAgAAAACAwAIAAAAAgMACAAAAAAAQWAAAAAAAEFgAAAAAABBYAAAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAQGABAAAAAEBgAQAAAABAYAEAAAAAQGABAAAAAAAILAAAAAAACCwAAAAAAAgsAAAAAAAAgQUAAAAAAIEFAAAAAACBBQAAAAAAILAAAAAAACCwAAAAAAAgsAAAAAAAAAQWAAAAAAAEFgAAAAAABBYAAAAAAAQWAAAAAACAwAIAAAAAgMACAAAAAIDAAgAAAAAAEFgAAAAAABBYAAAAAAAQWAAAAAAAAAILAAAAAAACCwAAAAAAAgsAAAAAAEBgAQAAAABAYAEAAAAAQGABAAAAAEBgAQAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAAAIEFAAAAAACBBQAAAAAAgQUAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAAAAEFgAAAAAABBYAAAAAAAQWAAAAAAAEFgAAAAAAgMACAAAAAIDAAgAAAACAwAIAAAAAABBYAAAAAAAQWAAAAAAAEFgAAAAAAAACCwAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAQGABAAAAAEBgAQAAAABAYAEAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAACBBQAAAAAAgQUAAAAAAIEFAAAAAAAgsAAAAAAAILAAAAAAACCwAAAAAAAgsAAAAAAAAAQWAAAAAAAEFgAAAAAABBYAAAAAAIDAAgAAAACAwAIAAAAAgMACAAAAAAAQWAAAAAAAEFgAAAAAABBYAAAAAAAAAgsAAAAAYIf4/wIMALPX4f3IZnnDAAAAAElFTkSuQmCC"
-
-/***/ },
-/* 14 */
-/***/ function(module, exports, __webpack_require__) {
-
-	__webpack_require__(15);
-	module.exports = 'ngRoute';
-
-
-/***/ },
-/* 15 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * @license AngularJS v1.3.14
-	 * (c) 2010-2014 Google, Inc. http://angularjs.org
-	 * License: MIT
-	 */
-	(function(window, angular, undefined) {'use strict';
-
-	/**
-	 * @ngdoc module
-	 * @name ngRoute
-	 * @description
-	 *
-	 * # ngRoute
-	 *
-	 * The `ngRoute` module provides routing and deeplinking services and directives for angular apps.
-	 *
-	 * ## Example
-	 * See {@link ngRoute.$route#example $route} for an example of configuring and using `ngRoute`.
-	 *
-	 *
-	 * <div doc-module-components="ngRoute"></div>
-	 */
-	 /* global -ngRouteModule */
-	var ngRouteModule = angular.module('ngRoute', ['ng']).
-	                        provider('$route', $RouteProvider),
-	    $routeMinErr = angular.$$minErr('ngRoute');
-
-	/**
-	 * @ngdoc provider
-	 * @name $routeProvider
-	 *
-	 * @description
-	 *
-	 * Used for configuring routes.
-	 *
-	 * ## Example
-	 * See {@link ngRoute.$route#example $route} for an example of configuring and using `ngRoute`.
-	 *
-	 * ## Dependencies
-	 * Requires the {@link ngRoute `ngRoute`} module to be installed.
-	 */
-	function $RouteProvider() {
-	  function inherit(parent, extra) {
-	    return angular.extend(Object.create(parent), extra);
-	  }
-
-	  var routes = {};
-
-	  /**
-	   * @ngdoc method
-	   * @name $routeProvider#when
-	   *
-	   * @param {string} path Route path (matched against `$location.path`). If `$location.path`
-	   *    contains redundant trailing slash or is missing one, the route will still match and the
-	   *    `$location.path` will be updated to add or drop the trailing slash to exactly match the
-	   *    route definition.
-	   *
-	   *    * `path` can contain named groups starting with a colon: e.g. `:name`. All characters up
-	   *        to the next slash are matched and stored in `$routeParams` under the given `name`
-	   *        when the route matches.
-	   *    * `path` can contain named groups starting with a colon and ending with a star:
-	   *        e.g.`:name*`. All characters are eagerly stored in `$routeParams` under the given `name`
-	   *        when the route matches.
-	   *    * `path` can contain optional named groups with a question mark: e.g.`:name?`.
-	   *
-	   *    For example, routes like `/color/:color/largecode/:largecode*\/edit` will match
-	   *    `/color/brown/largecode/code/with/slashes/edit` and extract:
-	   *
-	   *    * `color: brown`
-	   *    * `largecode: code/with/slashes`.
-	   *
-	   *
-	   * @param {Object} route Mapping information to be assigned to `$route.current` on route
-	   *    match.
-	   *
-	   *    Object properties:
-	   *
-	   *    - `controller` – `{(string|function()=}` – Controller fn that should be associated with
-	   *      newly created scope or the name of a {@link angular.Module#controller registered
-	   *      controller} if passed as a string.
-	   *    - `controllerAs` – `{string=}` – A controller alias name. If present the controller will be
-	   *      published to scope under the `controllerAs` name.
-	   *    - `template` – `{string=|function()=}` – html template as a string or a function that
-	   *      returns an html template as a string which should be used by {@link
-	   *      ngRoute.directive:ngView ngView} or {@link ng.directive:ngInclude ngInclude} directives.
-	   *      This property takes precedence over `templateUrl`.
-	   *
-	   *      If `template` is a function, it will be called with the following parameters:
-	   *
-	   *      - `{Array.<Object>}` - route parameters extracted from the current
-	   *        `$location.path()` by applying the current route
-	   *
-	   *    - `templateUrl` – `{string=|function()=}` – path or function that returns a path to an html
-	   *      template that should be used by {@link ngRoute.directive:ngView ngView}.
-	   *
-	   *      If `templateUrl` is a function, it will be called with the following parameters:
-	   *
-	   *      - `{Array.<Object>}` - route parameters extracted from the current
-	   *        `$location.path()` by applying the current route
-	   *
-	   *    - `resolve` - `{Object.<string, function>=}` - An optional map of dependencies which should
-	   *      be injected into the controller. If any of these dependencies are promises, the router
-	   *      will wait for them all to be resolved or one to be rejected before the controller is
-	   *      instantiated.
-	   *      If all the promises are resolved successfully, the values of the resolved promises are
-	   *      injected and {@link ngRoute.$route#$routeChangeSuccess $routeChangeSuccess} event is
-	   *      fired. If any of the promises are rejected the
-	   *      {@link ngRoute.$route#$routeChangeError $routeChangeError} event is fired. The map object
-	   *      is:
-	   *
-	   *      - `key` – `{string}`: a name of a dependency to be injected into the controller.
-	   *      - `factory` - `{string|function}`: If `string` then it is an alias for a service.
-	   *        Otherwise if function, then it is {@link auto.$injector#invoke injected}
-	   *        and the return value is treated as the dependency. If the result is a promise, it is
-	   *        resolved before its value is injected into the controller. Be aware that
-	   *        `ngRoute.$routeParams` will still refer to the previous route within these resolve
-	   *        functions.  Use `$route.current.params` to access the new route parameters, instead.
-	   *
-	   *    - `redirectTo` – {(string|function())=} – value to update
-	   *      {@link ng.$location $location} path with and trigger route redirection.
-	   *
-	   *      If `redirectTo` is a function, it will be called with the following parameters:
-	   *
-	   *      - `{Object.<string>}` - route parameters extracted from the current
-	   *        `$location.path()` by applying the current route templateUrl.
-	   *      - `{string}` - current `$location.path()`
-	   *      - `{Object}` - current `$location.search()`
-	   *
-	   *      The custom `redirectTo` function is expected to return a string which will be used
-	   *      to update `$location.path()` and `$location.search()`.
-	   *
-	   *    - `[reloadOnSearch=true]` - {boolean=} - reload route when only `$location.search()`
-	   *      or `$location.hash()` changes.
-	   *
-	   *      If the option is set to `false` and url in the browser changes, then
-	   *      `$routeUpdate` event is broadcasted on the root scope.
-	   *
-	   *    - `[caseInsensitiveMatch=false]` - {boolean=} - match routes without being case sensitive
-	   *
-	   *      If the option is set to `true`, then the particular route can be matched without being
-	   *      case sensitive
-	   *
-	   * @returns {Object} self
-	   *
-	   * @description
-	   * Adds a new route definition to the `$route` service.
-	   */
-	  this.when = function(path, route) {
-	    //copy original route object to preserve params inherited from proto chain
-	    var routeCopy = angular.copy(route);
-	    if (angular.isUndefined(routeCopy.reloadOnSearch)) {
-	      routeCopy.reloadOnSearch = true;
-	    }
-	    if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
-	      routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
-	    }
-	    routes[path] = angular.extend(
-	      routeCopy,
-	      path && pathRegExp(path, routeCopy)
-	    );
-
-	    // create redirection for trailing slashes
-	    if (path) {
-	      var redirectPath = (path[path.length - 1] == '/')
-	            ? path.substr(0, path.length - 1)
-	            : path + '/';
-
-	      routes[redirectPath] = angular.extend(
-	        {redirectTo: path},
-	        pathRegExp(redirectPath, routeCopy)
-	      );
-	    }
-
-	    return this;
-	  };
-
-	  /**
-	   * @ngdoc property
-	   * @name $routeProvider#caseInsensitiveMatch
-	   * @description
-	   *
-	   * A boolean property indicating if routes defined
-	   * using this provider should be matched using a case insensitive
-	   * algorithm. Defaults to `false`.
-	   */
-	  this.caseInsensitiveMatch = false;
-
-	   /**
-	    * @param path {string} path
-	    * @param opts {Object} options
-	    * @return {?Object}
-	    *
-	    * @description
-	    * Normalizes the given path, returning a regular expression
-	    * and the original path.
-	    *
-	    * Inspired by pathRexp in visionmedia/express/lib/utils.js.
-	    */
-	  function pathRegExp(path, opts) {
-	    var insensitive = opts.caseInsensitiveMatch,
-	        ret = {
-	          originalPath: path,
-	          regexp: path
-	        },
-	        keys = ret.keys = [];
-
-	    path = path
-	      .replace(/([().])/g, '\\$1')
-	      .replace(/(\/)?:(\w+)([\?\*])?/g, function(_, slash, key, option) {
-	        var optional = option === '?' ? option : null;
-	        var star = option === '*' ? option : null;
-	        keys.push({ name: key, optional: !!optional });
-	        slash = slash || '';
-	        return ''
-	          + (optional ? '' : slash)
-	          + '(?:'
-	          + (optional ? slash : '')
-	          + (star && '(.+?)' || '([^/]+)')
-	          + (optional || '')
-	          + ')'
-	          + (optional || '');
-	      })
-	      .replace(/([\/$\*])/g, '\\$1');
-
-	    ret.regexp = new RegExp('^' + path + '$', insensitive ? 'i' : '');
-	    return ret;
-	  }
-
-	  /**
-	   * @ngdoc method
-	   * @name $routeProvider#otherwise
-	   *
-	   * @description
-	   * Sets route definition that will be used on route change when no other route definition
-	   * is matched.
-	   *
-	   * @param {Object|string} params Mapping information to be assigned to `$route.current`.
-	   * If called with a string, the value maps to `redirectTo`.
-	   * @returns {Object} self
-	   */
-	  this.otherwise = function(params) {
-	    if (typeof params === 'string') {
-	      params = {redirectTo: params};
-	    }
-	    this.when(null, params);
-	    return this;
-	  };
-
-
-	  this.$get = ['$rootScope',
-	               '$location',
-	               '$routeParams',
-	               '$q',
-	               '$injector',
-	               '$templateRequest',
-	               '$sce',
-	      function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce) {
-
-	    /**
-	     * @ngdoc service
-	     * @name $route
-	     * @requires $location
-	     * @requires $routeParams
-	     *
-	     * @property {Object} current Reference to the current route definition.
-	     * The route definition contains:
-	     *
-	     *   - `controller`: The controller constructor as define in route definition.
-	     *   - `locals`: A map of locals which is used by {@link ng.$controller $controller} service for
-	     *     controller instantiation. The `locals` contain
-	     *     the resolved values of the `resolve` map. Additionally the `locals` also contain:
-	     *
-	     *     - `$scope` - The current route scope.
-	     *     - `$template` - The current route template HTML.
-	     *
-	     * @property {Object} routes Object with all route configuration Objects as its properties.
-	     *
-	     * @description
-	     * `$route` is used for deep-linking URLs to controllers and views (HTML partials).
-	     * It watches `$location.url()` and tries to map the path to an existing route definition.
-	     *
-	     * Requires the {@link ngRoute `ngRoute`} module to be installed.
-	     *
-	     * You can define routes through {@link ngRoute.$routeProvider $routeProvider}'s API.
-	     *
-	     * The `$route` service is typically used in conjunction with the
-	     * {@link ngRoute.directive:ngView `ngView`} directive and the
-	     * {@link ngRoute.$routeParams `$routeParams`} service.
-	     *
-	     * @example
-	     * This example shows how changing the URL hash causes the `$route` to match a route against the
-	     * URL, and the `ngView` pulls in the partial.
-	     *
-	     * <example name="$route-service" module="ngRouteExample"
-	     *          deps="angular-route.js" fixBase="true">
-	     *   <file name="index.html">
-	     *     <div ng-controller="MainController">
-	     *       Choose:
-	     *       <a href="Book/Moby">Moby</a> |
-	     *       <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-	     *       <a href="Book/Gatsby">Gatsby</a> |
-	     *       <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-	     *       <a href="Book/Scarlet">Scarlet Letter</a><br/>
-	     *
-	     *       <div ng-view></div>
-	     *
-	     *       <hr />
-	     *
-	     *       <pre>$location.path() = {{$location.path()}}</pre>
-	     *       <pre>$route.current.templateUrl = {{$route.current.templateUrl}}</pre>
-	     *       <pre>$route.current.params = {{$route.current.params}}</pre>
-	     *       <pre>$route.current.scope.name = {{$route.current.scope.name}}</pre>
-	     *       <pre>$routeParams = {{$routeParams}}</pre>
-	     *     </div>
-	     *   </file>
-	     *
-	     *   <file name="book.html">
-	     *     controller: {{name}}<br />
-	     *     Book Id: {{params.bookId}}<br />
-	     *   </file>
-	     *
-	     *   <file name="chapter.html">
-	     *     controller: {{name}}<br />
-	     *     Book Id: {{params.bookId}}<br />
-	     *     Chapter Id: {{params.chapterId}}
-	     *   </file>
-	     *
-	     *   <file name="script.js">
-	     *     angular.module('ngRouteExample', ['ngRoute'])
-	     *
-	     *      .controller('MainController', function($scope, $route, $routeParams, $location) {
-	     *          $scope.$route = $route;
-	     *          $scope.$location = $location;
-	     *          $scope.$routeParams = $routeParams;
-	     *      })
-	     *
-	     *      .controller('BookController', function($scope, $routeParams) {
-	     *          $scope.name = "BookController";
-	     *          $scope.params = $routeParams;
-	     *      })
-	     *
-	     *      .controller('ChapterController', function($scope, $routeParams) {
-	     *          $scope.name = "ChapterController";
-	     *          $scope.params = $routeParams;
-	     *      })
-	     *
-	     *     .config(function($routeProvider, $locationProvider) {
-	     *       $routeProvider
-	     *        .when('/Book/:bookId', {
-	     *         templateUrl: 'book.html',
-	     *         controller: 'BookController',
-	     *         resolve: {
-	     *           // I will cause a 1 second delay
-	     *           delay: function($q, $timeout) {
-	     *             var delay = $q.defer();
-	     *             $timeout(delay.resolve, 1000);
-	     *             return delay.promise;
-	     *           }
-	     *         }
-	     *       })
-	     *       .when('/Book/:bookId/ch/:chapterId', {
-	     *         templateUrl: 'chapter.html',
-	     *         controller: 'ChapterController'
-	     *       });
-	     *
-	     *       // configure html5 to get links working on jsfiddle
-	     *       $locationProvider.html5Mode(true);
-	     *     });
-	     *
-	     *   </file>
-	     *
-	     *   <file name="protractor.js" type="protractor">
-	     *     it('should load and compile correct template', function() {
-	     *       element(by.linkText('Moby: Ch1')).click();
-	     *       var content = element(by.css('[ng-view]')).getText();
-	     *       expect(content).toMatch(/controller\: ChapterController/);
-	     *       expect(content).toMatch(/Book Id\: Moby/);
-	     *       expect(content).toMatch(/Chapter Id\: 1/);
-	     *
-	     *       element(by.partialLinkText('Scarlet')).click();
-	     *
-	     *       content = element(by.css('[ng-view]')).getText();
-	     *       expect(content).toMatch(/controller\: BookController/);
-	     *       expect(content).toMatch(/Book Id\: Scarlet/);
-	     *     });
-	     *   </file>
-	     * </example>
-	     */
-
-	    /**
-	     * @ngdoc event
-	     * @name $route#$routeChangeStart
-	     * @eventType broadcast on root scope
-	     * @description
-	     * Broadcasted before a route change. At this  point the route services starts
-	     * resolving all of the dependencies needed for the route change to occur.
-	     * Typically this involves fetching the view template as well as any dependencies
-	     * defined in `resolve` route property. Once  all of the dependencies are resolved
-	     * `$routeChangeSuccess` is fired.
-	     *
-	     * The route change (and the `$location` change that triggered it) can be prevented
-	     * by calling `preventDefault` method of the event. See {@link ng.$rootScope.Scope#$on}
-	     * for more details about event object.
-	     *
-	     * @param {Object} angularEvent Synthetic event object.
-	     * @param {Route} next Future route information.
-	     * @param {Route} current Current route information.
-	     */
-
-	    /**
-	     * @ngdoc event
-	     * @name $route#$routeChangeSuccess
-	     * @eventType broadcast on root scope
-	     * @description
-	     * Broadcasted after a route dependencies are resolved.
-	     * {@link ngRoute.directive:ngView ngView} listens for the directive
-	     * to instantiate the controller and render the view.
-	     *
-	     * @param {Object} angularEvent Synthetic event object.
-	     * @param {Route} current Current route information.
-	     * @param {Route|Undefined} previous Previous route information, or undefined if current is
-	     * first route entered.
-	     */
-
-	    /**
-	     * @ngdoc event
-	     * @name $route#$routeChangeError
-	     * @eventType broadcast on root scope
-	     * @description
-	     * Broadcasted if any of the resolve promises are rejected.
-	     *
-	     * @param {Object} angularEvent Synthetic event object
-	     * @param {Route} current Current route information.
-	     * @param {Route} previous Previous route information.
-	     * @param {Route} rejection Rejection of the promise. Usually the error of the failed promise.
-	     */
-
-	    /**
-	     * @ngdoc event
-	     * @name $route#$routeUpdate
-	     * @eventType broadcast on root scope
-	     * @description
-	     *
-	     * The `reloadOnSearch` property has been set to false, and we are reusing the same
-	     * instance of the Controller.
-	     */
-
-	    var forceReload = false,
-	        preparedRoute,
-	        preparedRouteIsUpdateOnly,
-	        $route = {
-	          routes: routes,
-
-	          /**
-	           * @ngdoc method
-	           * @name $route#reload
-	           *
-	           * @description
-	           * Causes `$route` service to reload the current route even if
-	           * {@link ng.$location $location} hasn't changed.
-	           *
-	           * As a result of that, {@link ngRoute.directive:ngView ngView}
-	           * creates new scope and reinstantiates the controller.
-	           */
-	          reload: function() {
-	            forceReload = true;
-	            $rootScope.$evalAsync(function() {
-	              // Don't support cancellation of a reload for now...
-	              prepareRoute();
-	              commitRoute();
-	            });
-	          },
-
-	          /**
-	           * @ngdoc method
-	           * @name $route#updateParams
-	           *
-	           * @description
-	           * Causes `$route` service to update the current URL, replacing
-	           * current route parameters with those specified in `newParams`.
-	           * Provided property names that match the route's path segment
-	           * definitions will be interpolated into the location's path, while
-	           * remaining properties will be treated as query params.
-	           *
-	           * @param {!Object<string, string>} newParams mapping of URL parameter names to values
-	           */
-	          updateParams: function(newParams) {
-	            if (this.current && this.current.$$route) {
-	              newParams = angular.extend({}, this.current.params, newParams);
-	              $location.path(interpolate(this.current.$$route.originalPath, newParams));
-	              // interpolate modifies newParams, only query params are left
-	              $location.search(newParams);
-	            } else {
-	              throw $routeMinErr('norout', 'Tried updating route when with no current route');
-	            }
-	          }
-	        };
-
-	    $rootScope.$on('$locationChangeStart', prepareRoute);
-	    $rootScope.$on('$locationChangeSuccess', commitRoute);
-
-	    return $route;
-
-	    /////////////////////////////////////////////////////
-
-	    /**
-	     * @param on {string} current url
-	     * @param route {Object} route regexp to match the url against
-	     * @return {?Object}
-	     *
-	     * @description
-	     * Check if the route matches the current url.
-	     *
-	     * Inspired by match in
-	     * visionmedia/express/lib/router/router.js.
-	     */
-	    function switchRouteMatcher(on, route) {
-	      var keys = route.keys,
-	          params = {};
-
-	      if (!route.regexp) return null;
-
-	      var m = route.regexp.exec(on);
-	      if (!m) return null;
-
-	      for (var i = 1, len = m.length; i < len; ++i) {
-	        var key = keys[i - 1];
-
-	        var val = m[i];
-
-	        if (key && val) {
-	          params[key.name] = val;
-	        }
-	      }
-	      return params;
-	    }
-
-	    function prepareRoute($locationEvent) {
-	      var lastRoute = $route.current;
-
-	      preparedRoute = parseRoute();
-	      preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route
-	          && angular.equals(preparedRoute.pathParams, lastRoute.pathParams)
-	          && !preparedRoute.reloadOnSearch && !forceReload;
-
-	      if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
-	        if ($rootScope.$broadcast('$routeChangeStart', preparedRoute, lastRoute).defaultPrevented) {
-	          if ($locationEvent) {
-	            $locationEvent.preventDefault();
-	          }
-	        }
-	      }
-	    }
-
-	    function commitRoute() {
-	      var lastRoute = $route.current;
-	      var nextRoute = preparedRoute;
-
-	      if (preparedRouteIsUpdateOnly) {
-	        lastRoute.params = nextRoute.params;
-	        angular.copy(lastRoute.params, $routeParams);
-	        $rootScope.$broadcast('$routeUpdate', lastRoute);
-	      } else if (nextRoute || lastRoute) {
-	        forceReload = false;
-	        $route.current = nextRoute;
-	        if (nextRoute) {
-	          if (nextRoute.redirectTo) {
-	            if (angular.isString(nextRoute.redirectTo)) {
-	              $location.path(interpolate(nextRoute.redirectTo, nextRoute.params)).search(nextRoute.params)
-	                       .replace();
-	            } else {
-	              $location.url(nextRoute.redirectTo(nextRoute.pathParams, $location.path(), $location.search()))
-	                       .replace();
-	            }
-	          }
-	        }
-
-	        $q.when(nextRoute).
-	          then(function() {
-	            if (nextRoute) {
-	              var locals = angular.extend({}, nextRoute.resolve),
-	                  template, templateUrl;
-
-	              angular.forEach(locals, function(value, key) {
-	                locals[key] = angular.isString(value) ?
-	                    $injector.get(value) : $injector.invoke(value, null, null, key);
-	              });
-
-	              if (angular.isDefined(template = nextRoute.template)) {
-	                if (angular.isFunction(template)) {
-	                  template = template(nextRoute.params);
-	                }
-	              } else if (angular.isDefined(templateUrl = nextRoute.templateUrl)) {
-	                if (angular.isFunction(templateUrl)) {
-	                  templateUrl = templateUrl(nextRoute.params);
-	                }
-	                templateUrl = $sce.getTrustedResourceUrl(templateUrl);
-	                if (angular.isDefined(templateUrl)) {
-	                  nextRoute.loadedTemplateUrl = templateUrl;
-	                  template = $templateRequest(templateUrl);
-	                }
-	              }
-	              if (angular.isDefined(template)) {
-	                locals['$template'] = template;
-	              }
-	              return $q.all(locals);
-	            }
-	          }).
-	          // after route change
-	          then(function(locals) {
-	            if (nextRoute == $route.current) {
-	              if (nextRoute) {
-	                nextRoute.locals = locals;
-	                angular.copy(nextRoute.params, $routeParams);
-	              }
-	              $rootScope.$broadcast('$routeChangeSuccess', nextRoute, lastRoute);
-	            }
-	          }, function(error) {
-	            if (nextRoute == $route.current) {
-	              $rootScope.$broadcast('$routeChangeError', nextRoute, lastRoute, error);
-	            }
-	          });
-	      }
-	    }
-
-
-	    /**
-	     * @returns {Object} the current active route, by matching it against the URL
-	     */
-	    function parseRoute() {
-	      // Match a route
-	      var params, match;
-	      angular.forEach(routes, function(route, path) {
-	        if (!match && (params = switchRouteMatcher($location.path(), route))) {
-	          match = inherit(route, {
-	            params: angular.extend({}, $location.search(), params),
-	            pathParams: params});
-	          match.$$route = route;
-	        }
-	      });
-	      // No route matched; fallback to "otherwise" route
-	      return match || routes[null] && inherit(routes[null], {params: {}, pathParams:{}});
-	    }
-
-	    /**
-	     * @returns {string} interpolation of the redirect path with the parameters
-	     */
-	    function interpolate(string, params) {
-	      var result = [];
-	      angular.forEach((string || '').split(':'), function(segment, i) {
-	        if (i === 0) {
-	          result.push(segment);
-	        } else {
-	          var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
-	          var key = segmentMatch[1];
-	          result.push(params[key]);
-	          result.push(segmentMatch[2] || '');
-	          delete params[key];
-	        }
-	      });
-	      return result.join('');
-	    }
-	  }];
-	}
-
-	ngRouteModule.provider('$routeParams', $RouteParamsProvider);
-
-
-	/**
-	 * @ngdoc service
-	 * @name $routeParams
-	 * @requires $route
-	 *
-	 * @description
-	 * The `$routeParams` service allows you to retrieve the current set of route parameters.
-	 *
-	 * Requires the {@link ngRoute `ngRoute`} module to be installed.
-	 *
-	 * The route parameters are a combination of {@link ng.$location `$location`}'s
-	 * {@link ng.$location#search `search()`} and {@link ng.$location#path `path()`}.
-	 * The `path` parameters are extracted when the {@link ngRoute.$route `$route`} path is matched.
-	 *
-	 * In case of parameter name collision, `path` params take precedence over `search` params.
-	 *
-	 * The service guarantees that the identity of the `$routeParams` object will remain unchanged
-	 * (but its properties will likely change) even when a route change occurs.
-	 *
-	 * Note that the `$routeParams` are only updated *after* a route change completes successfully.
-	 * This means that you cannot rely on `$routeParams` being correct in route resolve functions.
-	 * Instead you can use `$route.current.params` to access the new route's parameters.
-	 *
-	 * @example
-	 * ```js
-	 *  // Given:
-	 *  // URL: http://server.com/index.html#/Chapter/1/Section/2?search=moby
-	 *  // Route: /Chapter/:chapterId/Section/:sectionId
-	 *  //
-	 *  // Then
-	 *  $routeParams ==> {chapterId:'1', sectionId:'2', search:'moby'}
-	 * ```
-	 */
-	function $RouteParamsProvider() {
-	  this.$get = function() { return {}; };
-	}
-
-	ngRouteModule.directive('ngView', ngViewFactory);
-	ngRouteModule.directive('ngView', ngViewFillContentFactory);
-
-
-	/**
-	 * @ngdoc directive
-	 * @name ngView
-	 * @restrict ECA
-	 *
-	 * @description
-	 * # Overview
-	 * `ngView` is a directive that complements the {@link ngRoute.$route $route} service by
-	 * including the rendered template of the current route into the main layout (`index.html`) file.
-	 * Every time the current route changes, the included view changes with it according to the
-	 * configuration of the `$route` service.
-	 *
-	 * Requires the {@link ngRoute `ngRoute`} module to be installed.
-	 *
-	 * @animations
-	 * enter - animation is used to bring new content into the browser.
-	 * leave - animation is used to animate existing content away.
-	 *
-	 * The enter and leave animation occur concurrently.
-	 *
-	 * @scope
-	 * @priority 400
-	 * @param {string=} onload Expression to evaluate whenever the view updates.
-	 *
-	 * @param {string=} autoscroll Whether `ngView` should call {@link ng.$anchorScroll
-	 *                  $anchorScroll} to scroll the viewport after the view is updated.
-	 *
-	 *                  - If the attribute is not set, disable scrolling.
-	 *                  - If the attribute is set without value, enable scrolling.
-	 *                  - Otherwise enable scrolling only if the `autoscroll` attribute value evaluated
-	 *                    as an expression yields a truthy value.
-	 * @example
-	    <example name="ngView-directive" module="ngViewExample"
-	             deps="angular-route.js;angular-animate.js"
-	             animations="true" fixBase="true">
-	      <file name="index.html">
-	        <div ng-controller="MainCtrl as main">
-	          Choose:
-	          <a href="Book/Moby">Moby</a> |
-	          <a href="Book/Moby/ch/1">Moby: Ch1</a> |
-	          <a href="Book/Gatsby">Gatsby</a> |
-	          <a href="Book/Gatsby/ch/4?key=value">Gatsby: Ch4</a> |
-	          <a href="Book/Scarlet">Scarlet Letter</a><br/>
-
-	          <div class="view-animate-container">
-	            <div ng-view class="view-animate"></div>
-	          </div>
-	          <hr />
-
-	          <pre>$location.path() = {{main.$location.path()}}</pre>
-	          <pre>$route.current.templateUrl = {{main.$route.current.templateUrl}}</pre>
-	          <pre>$route.current.params = {{main.$route.current.params}}</pre>
-	          <pre>$routeParams = {{main.$routeParams}}</pre>
-	        </div>
-	      </file>
-
-	      <file name="book.html">
-	        <div>
-	          controller: {{book.name}}<br />
-	          Book Id: {{book.params.bookId}}<br />
-	        </div>
-	      </file>
-
-	      <file name="chapter.html">
-	        <div>
-	          controller: {{chapter.name}}<br />
-	          Book Id: {{chapter.params.bookId}}<br />
-	          Chapter Id: {{chapter.params.chapterId}}
-	        </div>
-	      </file>
-
-	      <file name="animations.css">
-	        .view-animate-container {
-	          position:relative;
-	          height:100px!important;
-	          background:white;
-	          border:1px solid black;
-	          height:40px;
-	          overflow:hidden;
-	        }
-
-	        .view-animate {
-	          padding:10px;
-	        }
-
-	        .view-animate.ng-enter, .view-animate.ng-leave {
-	          -webkit-transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 1.5s;
-	          transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 1.5s;
-
-	          display:block;
-	          width:100%;
-	          border-left:1px solid black;
-
-	          position:absolute;
-	          top:0;
-	          left:0;
-	          right:0;
-	          bottom:0;
-	          padding:10px;
-	        }
-
-	        .view-animate.ng-enter {
-	          left:100%;
-	        }
-	        .view-animate.ng-enter.ng-enter-active {
-	          left:0;
-	        }
-	        .view-animate.ng-leave.ng-leave-active {
-	          left:-100%;
-	        }
-	      </file>
-
-	      <file name="script.js">
-	        angular.module('ngViewExample', ['ngRoute', 'ngAnimate'])
-	          .config(['$routeProvider', '$locationProvider',
-	            function($routeProvider, $locationProvider) {
-	              $routeProvider
-	                .when('/Book/:bookId', {
-	                  templateUrl: 'book.html',
-	                  controller: 'BookCtrl',
-	                  controllerAs: 'book'
-	                })
-	                .when('/Book/:bookId/ch/:chapterId', {
-	                  templateUrl: 'chapter.html',
-	                  controller: 'ChapterCtrl',
-	                  controllerAs: 'chapter'
-	                });
-
-	              $locationProvider.html5Mode(true);
-	          }])
-	          .controller('MainCtrl', ['$route', '$routeParams', '$location',
-	            function($route, $routeParams, $location) {
-	              this.$route = $route;
-	              this.$location = $location;
-	              this.$routeParams = $routeParams;
-	          }])
-	          .controller('BookCtrl', ['$routeParams', function($routeParams) {
-	            this.name = "BookCtrl";
-	            this.params = $routeParams;
-	          }])
-	          .controller('ChapterCtrl', ['$routeParams', function($routeParams) {
-	            this.name = "ChapterCtrl";
-	            this.params = $routeParams;
-	          }]);
-
-	      </file>
-
-	      <file name="protractor.js" type="protractor">
-	        it('should load and compile correct template', function() {
-	          element(by.linkText('Moby: Ch1')).click();
-	          var content = element(by.css('[ng-view]')).getText();
-	          expect(content).toMatch(/controller\: ChapterCtrl/);
-	          expect(content).toMatch(/Book Id\: Moby/);
-	          expect(content).toMatch(/Chapter Id\: 1/);
-
-	          element(by.partialLinkText('Scarlet')).click();
-
-	          content = element(by.css('[ng-view]')).getText();
-	          expect(content).toMatch(/controller\: BookCtrl/);
-	          expect(content).toMatch(/Book Id\: Scarlet/);
-	        });
-	      </file>
-	    </example>
-	 */
-
-
-	/**
-	 * @ngdoc event
-	 * @name ngView#$viewContentLoaded
-	 * @eventType emit on the current ngView scope
-	 * @description
-	 * Emitted every time the ngView content is reloaded.
-	 */
-	ngViewFactory.$inject = ['$route', '$anchorScroll', '$animate'];
-	function ngViewFactory($route, $anchorScroll, $animate) {
-	  return {
-	    restrict: 'ECA',
-	    terminal: true,
-	    priority: 400,
-	    transclude: 'element',
-	    link: function(scope, $element, attr, ctrl, $transclude) {
-	        var currentScope,
-	            currentElement,
-	            previousLeaveAnimation,
-	            autoScrollExp = attr.autoscroll,
-	            onloadExp = attr.onload || '';
-
-	        scope.$on('$routeChangeSuccess', update);
-	        update();
-
-	        function cleanupLastView() {
-	          if (previousLeaveAnimation) {
-	            $animate.cancel(previousLeaveAnimation);
-	            previousLeaveAnimation = null;
-	          }
-
-	          if (currentScope) {
-	            currentScope.$destroy();
-	            currentScope = null;
-	          }
-	          if (currentElement) {
-	            previousLeaveAnimation = $animate.leave(currentElement);
-	            previousLeaveAnimation.then(function() {
-	              previousLeaveAnimation = null;
-	            });
-	            currentElement = null;
-	          }
-	        }
-
-	        function update() {
-	          var locals = $route.current && $route.current.locals,
-	              template = locals && locals.$template;
-
-	          if (angular.isDefined(template)) {
-	            var newScope = scope.$new();
-	            var current = $route.current;
-
-	            // Note: This will also link all children of ng-view that were contained in the original
-	            // html. If that content contains controllers, ... they could pollute/change the scope.
-	            // However, using ng-view on an element with additional content does not make sense...
-	            // Note: We can't remove them in the cloneAttchFn of $transclude as that
-	            // function is called before linking the content, which would apply child
-	            // directives to non existing elements.
-	            var clone = $transclude(newScope, function(clone) {
-	              $animate.enter(clone, null, currentElement || $element).then(function onNgViewEnter() {
-	                if (angular.isDefined(autoScrollExp)
-	                  && (!autoScrollExp || scope.$eval(autoScrollExp))) {
-	                  $anchorScroll();
-	                }
-	              });
-	              cleanupLastView();
-	            });
-
-	            currentElement = clone;
-	            currentScope = current.scope = newScope;
-	            currentScope.$emit('$viewContentLoaded');
-	            currentScope.$eval(onloadExp);
-	          } else {
-	            cleanupLastView();
-	          }
-	        }
-	    }
-	  };
-	}
-
-	// This directive is called during the $transclude call of the first `ngView` directive.
-	// It will replace and compile the content of the element with the loaded template.
-	// We need this directive so that the element content is already filled when
-	// the link function of another directive on the same element as ngView
-	// is called.
-	ngViewFillContentFactory.$inject = ['$compile', '$controller', '$route'];
-	function ngViewFillContentFactory($compile, $controller, $route) {
-	  return {
-	    restrict: 'ECA',
-	    priority: -400,
-	    link: function(scope, $element) {
-	      var current = $route.current,
-	          locals = current.locals;
-
-	      $element.html(locals.$template);
-
-	      var link = $compile($element.contents());
-
-	      if (current.controller) {
-	        locals.$scope = scope;
-	        var controller = $controller(current.controller, locals);
-	        if (current.controllerAs) {
-	          scope[current.controllerAs] = controller;
-	        }
-	        $element.data('$ngControllerController', controller);
-	        $element.children().data('$ngControllerController', controller);
-	      }
-
-	      link(scope);
-	    }
-	  };
-	}
-
-
-	})(window, window.angular);
-
+	module.exports = __webpack_require__.p + "components/admin/admin.html"
 
 /***/ }
 /******/ ]);

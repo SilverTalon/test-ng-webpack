@@ -1,25 +1,19 @@
 'use strict';
 
 var angular = require('angular');
+var ngNewRouter = require('ngNewRouter');
+require('./components/dashboard/dashboard');
+require('./components/admin/admin');
 
-angular.module('myPeachApp', [require('angular-route')])
-  .config(myPeachAppConfig);
+angular.module('peachWeb', ['ngNewRouter', 'peachWeb.dashboard', 'peachWeb.admin'])
+  .controller('PeachAppController', ['$router', PeachAppController]);
 
-myPeachAppConfig.$inject = ['$routeProvider'];
-
-function myPeachAppConfig($routeProvider) {
-  $routeProvider
-    .when('/', {
-      templateUrl: 'app/dashboard/dashboard.html',
-      controller: 'DashboardController',
-      controllerAs: 'vm',
-      resolve: {
-
-      }
-    })
-    .otherwise({
-      redirectTo: '/'
-    });
+function PeachAppController($router) {
+  $router.config([
+    { path: '/',                  redirectTo: '/dashboard' },
+    { path: '/dashboard',         component: 'dashboard' },
+    { path: '/admin/:canPass',     component: 'admin' }
+  ]);
 }
 
 module.exports = angular;

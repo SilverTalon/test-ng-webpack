@@ -11,3 +11,9 @@ An example of webpack workflow, as presented in the following article [Creating 
 
 ### Introducing the webpack cookbook
 @bebraw and me have been working on a cookbook for React JS and Webpack practices. Check it out at [react-webpack-cookbook](http://christianalfoni.github.io/react-webpack-cookbook/) and build your custom config file with the best practices in the community.
+
+
+
+
+
+Using file-loader to copy the page templates to their proper directory within /build until newRouter supports templateCache paths...

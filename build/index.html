@@ -4,14 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Document</title>
+  <base href="/">
 </head>
 
-<body>
+<body ng-app="peachWeb" ng-strict-di ng-controller="PeachAppController">
   <div>
-    <a href="#">Dashboard</a>
+    <a href="#dashboard">Dashboard</a>
     <a href="#admin">Admin</a>
   </div>
-  <div ng-view></div>
+  <ng-viewport></ng-viewport>
+
   <script src="http://localhost:8080/webpack-dev-server.js"></script>
   <script src="bundle.js"></script>
 
